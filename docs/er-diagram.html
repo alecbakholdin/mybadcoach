@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>My Bad, Coach — SQLite data model</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.4.1/mermaid.min.js"></script>
+<style>
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    margin: 2rem auto;
+    max-width: 1200px;
+    padding: 0 1rem;
+    color: #1f2430;
+    background: #ffffff;
+  }
+  h1 { font-size: 1.35rem; margin-bottom: 0.25rem; }
+  p.sub { color: #6b7280; margin: 0 0 1.5rem; font-size: 0.95rem; }
+  .mermaid { overflow-x: auto; }
+</style>
+</head>
+<body>
+<h1>My Bad, Coach — SQLite data model</h1>
+<p class="sub">CRUD tables (users → teams → events → matches, players, roster) plus the append-only match event log. Stats are derived, not stored.</p>
+<pre class="mermaid">
+erDiagram
+    users ||--o{ team_memberships : "belongs to"
+    teams ||--o{ team_memberships : "has"
+    teams ||--o{ events : "organizes"
+    events ||--o{ matches : "contains"
+    teams ||--o{ players : "has"
+    players ||--o{ roster_entries : "appears in"
+    matches ||--o{ roster_entries : "fields"
+    matches ||--o{ match_events : "logs"
+
+    users {
+        uuid id PK
+        text email UK
+        text name
+        datetime created_at
+    }
+
+    teams {
+        uuid id PK
+        text name
+        datetime created_at
+    }
+
+    team_memberships {
+        uuid id PK
+        uuid user_id FK
+        uuid team_id FK
+        text role
+        datetime created_at
+    }
+
+    events {
+        uuid id PK
+        uuid team_id FK
+        text name
+        date start_date
+        date end_date
+        text location
+    }
+
+    matches {
+        uuid id PK
+        uuid event_id FK
+        text opponent_name
+        datetime scheduled_at
+        int point_cap
+        datetime created_at
+    }
+
+    players {
+        uuid id PK
+        uuid team_id FK
+        text name
+        int jersey_number
+        datetime created_at
+    }
+
+    roster_entries {
+        uuid id PK
+        uuid match_id FK
+        uuid player_id FK
+        bool is_starting
+        int position
+        datetime created_at
+    }
+
+    match_events {
+        uuid id PK
+        uuid match_id FK
+        int point_number
+        bigint effective_ts
+        text type
+        json payload
+        datetime created_at
+    }
+</pre>
+<script>
+  mermaid.initialize({ startOnLoad: true, theme: 'default' });
+</script>
+</body>
+</html>

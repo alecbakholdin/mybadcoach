@@ -1,0 +1,100 @@
+erDiagram
+    users ||--o{ team_memberships : "belongs to"
+    teams ||--o{ team_memberships : "has"
+    teams ||--o{ seasons : "has"
+    seasons ||--o{ events : "contains"
+    events ||--o{ matches : "contains"
+    teams ||--o{ players : "has"
+    seasons ||--o{ season_roster_entries : "registers"
+    players ||--o{ season_roster_entries : "registered in"
+    events ||--o{ event_roster_entries : "registers"
+    players ||--o{ event_roster_entries : "registered in"
+    matches ||--o{ match_events : "logs"
+
+    users {
+        uuid id PK
+        text email UK
+        text name
+        datetime created_at
+    }
+
+    teams {
+        uuid id PK
+        text name
+        text slug UK
+        datetime created_at
+    }
+
+    team_memberships {
+        uuid id PK
+        uuid user_id FK
+        uuid team_id FK
+        text role
+        datetime created_at
+    }
+
+    seasons {
+        uuid id PK
+        uuid team_id FK
+        text name
+        text slug
+        date start_date
+        date end_date
+        datetime created_at
+    }
+
+    events {
+        uuid id PK
+        uuid season_id FK
+        text name
+        text slug
+        date start_date
+        date end_date
+        text location
+    }
+
+    matches {
+        uuid id PK
+        uuid event_id FK
+        uuid our_team_id FK
+        text opponent_name
+        text slug
+        datetime scheduled_at
+        int point_cap
+        bool deleted
+        datetime created_at
+    }
+
+    players {
+        uuid id PK
+        uuid team_id FK
+        json names
+        text slug
+        bool deleted
+        datetime created_at
+    }
+
+    season_roster_entries {
+        uuid id PK
+        uuid season_id FK
+        uuid player_id FK
+        datetime created_at
+    }
+
+    event_roster_entries {
+        uuid id PK
+        uuid event_id FK
+        uuid player_id FK
+        datetime created_at
+    }
+
+    match_events {
+        uuid id PK
+        uuid match_id FK
+        int point_number
+        bigint effective_ts
+        text type
+        json payload
+        bool deleted
+        datetime created_at
+    }
