@@ -1,0 +1,38 @@
+{
+  "name": "SUB_PLAYER swaps the outgoing player in place",
+  "initialRole": "OFFENSE",
+  "events": [
+    {
+      "id": "evt-lineup",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 1000,
+      "createdAt": "2026-03-14T09:00:01Z",
+      "deleted": false,
+      "type": "SET_LINEUP",
+      "payload": {
+        "playerIds": ["player-1", "player-2", "player-3"]
+      }
+    },
+    {
+      "id": "evt-sub",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 2000,
+      "createdAt": "2026-03-14T09:00:02Z",
+      "deleted": false,
+      "type": "SUB_PLAYER",
+      "payload": {
+        "playerOutId": "player-2",
+        "playerInId": "player-4"
+      }
+    }
+  ],
+  "expected": {
+    "view": "PULL_WAIT",
+    "initialRole": "OFFENSE",
+    "lineup": ["player-1", "player-4", "player-3"],
+    "thrower": "",
+    "playerStats": {}
+  }
+}
