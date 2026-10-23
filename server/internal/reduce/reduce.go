@@ -23,6 +23,8 @@ func CreditBaseStat(
 // All nine MatchEvent types are implemented in the EventType declaration
 // order, mirroring the TypeScript switch in
 // packages/shared/src/reducer.ts.
+//
+//nolint:revive // "reduce.ReducePoint" mirrors the cross-language reducePoint contract (docs/architecture.md); "Point" alone would be ambiguous and diverge from the TS port.
 func ReducePoint(events []MatchEvent, initialRole StartingRole) PointDerivedState {
 	state := InitialPointState(initialRole)
 

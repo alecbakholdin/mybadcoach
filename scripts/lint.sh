@@ -16,7 +16,7 @@ fi
 require() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "missing required tool: $1" >&2
-    echo "run scripts/install-tools.sh (buf); golangci-lint and sqlc are dev-image tools" >&2
+    echo "run scripts/install-tools.sh (buf and golangci-lint); sqlc is installed separately" >&2
     exit 1
   fi
 }

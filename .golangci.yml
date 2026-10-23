@@ -1,43 +1,39 @@
 # Strict Go lint gate for the server module, per docs/testing.md.
 #
 # Run through `npm run lint` (scripts/lint.sh) from the repo root; golangci-lint
-# resolves this file from server/ by walking up to the repo root.
-# Requires a golangci-lint binary built with Go >= 1.27 (the server module's
-# target). The v1.64.8 binary installed in this environment was built with Go
-# 1.25 and aborts on this module ("package requires newer Go version go1.27");
-# upgrading the tool is pending dependency approval.
+# resolves this file from server/ by walking up to the repo root. This is the
+# golangci-lint v2 schema (v2.15.0, approved as the upgrade from the v1.64.8
+# binary that was built with Go 1.25 and could not lint the Go 1.27 module).
+version: "2"
+
 run:
   timeout: 5m
 
 linters:
-  disable-all: true
+  # Every linter is opt-in; no default set, so nothing runs that isn't listed.
+  default: none
   enable:
     - errcheck
-    - govet
-    - staticcheck
-    - gosimple
-    - stylecheck
-    - ineffassign
-    - unused
-    - revive
+    - exhaustive
     - gocritic
     - gosec
-    - exhaustive
-    - nilerr
+    - govet
+    - ineffassign
     - misspell
-    - gofmt
-    - gofumpt
+    - nilerr
+    - revive
+    - staticcheck
+    - unused
 
   settings:
     govet:
       enable-all: true
     staticcheck:
-      checks: ["all"]
-    gosimple:
-      checks: ["all"]
-    stylecheck:
+      # staticcheck in v2 folds in the former gosimple + stylecheck linters;
+      # "all" enables SA*, S*, ST* and QF*.
       checks: ["all"]
     revive:
+      # The strict revive ruleset from docs/testing.md (golint successor).
       rules:
         - name: blank-imports
         - name: context-as-argument
@@ -62,22 +58,30 @@ linters:
         - name: var-declaration
         - name: var-naming
     gocritic:
-      # All stable check groups: the high bar from docs/testing.md.
+      # The high bar from docs/testing.md: all stable check groups.
       enabled-tags:
         - diagnostic
         - style
         - performance
-    gosec:
-      excludes: []
     exhaustive:
+      # A switch with a default case counts as exhaustive; the reducer's enum
+      # switch tables rely on this being strict everywhere else.
       default-signifies-exhaustive: true
 
+  exclusions:
+    # buf-generated .pb.go / .connect.go carry the standard "Code generated"
+    # marker and are not hand-edited, so they are not linted (they are still
+    # compiled and typechecked by `go build` / `go test`). No other exclusions:
+    # this mirrors v1's `exclude-use-default: false`.
+    generated: lax
+
 issues:
-  # No default exclusion presets: every finding is an error.
-  exclude-use-default: false
-  # buf-generated .pb.go / .connect.go carry the standard "Code generated"
-  # marker. Generated code is not hand-edited, so it is not linted (it is still
-  # compiled and typechecked by `go build` / `go test`).
-  exclude-generated: lax
   max-issues-per-linter: 0
   max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+  exclusions:
+    generated: lax

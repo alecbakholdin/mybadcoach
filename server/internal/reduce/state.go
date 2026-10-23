@@ -38,11 +38,15 @@ type PlayerStats struct {
 // disc, and PlayerStats is always a map. This matches the TypeScript
 // PointDerivedState under canonical JSON.
 type PointDerivedState struct {
+	// Lineup is last so the garbage collector scans the smallest possible
+	// prefix (fieldalignment): its data pointer is the final live pointer and
+	// its length/capacity are not scanned. Field order does not affect JSON
+	// output — canonical comparison sorts keys and every field carries a tag.
 	View        View                   `json:"view"`
 	InitialRole StartingRole           `json:"initialRole"`
-	Lineup      []string               `json:"lineup"`
 	Thrower     string                 `json:"thrower"`
 	PlayerStats map[string]PlayerStats `json:"playerStats"`
+	Lineup      []string               `json:"lineup"`
 }
 
 // InitialPointState is the state every point starts in.

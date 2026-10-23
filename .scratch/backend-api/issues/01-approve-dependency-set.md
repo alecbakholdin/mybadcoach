@@ -35,3 +35,8 @@ Version pins and installation happen with the implementation tickets (next effor
 
 7. `@connectrpc/connect-node` — dev-only, the stub Connect server behind frontend-only tests
    (ticket 03's resolution). Approved by Alec on 2026-10-22.
+
+8. `golangci-lint` v2.x — dev-only, the Go lint gate tool. Upgrades the pre-existing v1.64.8
+   binary (built with Go 1.25.3), which cannot lint the Go 1.27.3 server module; no v1.x
+   release is built with Go ≥1.27. Approved by Alec on 2026-10-23 (upgrade to v2.x; the
+   `.golangci.yml` migrates to the v2 schema).

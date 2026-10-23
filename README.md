@@ -14,7 +14,8 @@ TypeScript client and the Go server turns the log into live statistics.
   installs this pinned version into `.tools/bin/` (gitignored), which the lint and generate
   scripts put first on `PATH`.
 - **sqlc 1.31.1** — SQL codegen (`npm run generate`); supplied by the dev image.
-- **golangci-lint 1.64.8** — strict Go lint (`npm run lint`); supplied by the dev image.
+- **golangci-lint 2.15.0** — strict Go lint (`npm run lint`); `scripts/install-tools.sh` installs
+  this pinned version into `.tools/bin/` alongside buf.
 
 ## Getting started
 
