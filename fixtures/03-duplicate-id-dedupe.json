@@ -1,0 +1,59 @@
+{
+  "name": "duplicate event ids are reduced once",
+  "initialRole": "OFFENSE",
+  "events": [
+    {
+      "id": "evt-lineup",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 1000,
+      "createdAt": "2026-03-14T09:00:01Z",
+      "deleted": false,
+      "type": "SET_LINEUP",
+      "payload": {
+        "playerIds": ["player-a", "player-b"]
+      }
+    },
+    {
+      "id": "evt-touch-1",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 2000,
+      "createdAt": "2026-03-14T09:00:02Z",
+      "deleted": false,
+      "type": "TOUCH",
+      "payload": {
+        "playerId": "player-a"
+      }
+    },
+    {
+      "id": "evt-touch-1",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 2000,
+      "createdAt": "2026-03-14T09:00:02Z",
+      "deleted": false,
+      "type": "TOUCH",
+      "payload": {
+        "playerId": "player-a"
+      }
+    }
+  ],
+  "expected": {
+    "view": "OFFENSE_POSSESSION",
+    "initialRole": "OFFENSE",
+    "lineup": ["player-a", "player-b"],
+    "thrower": "player-a",
+    "playerStats": {
+      "player-a": {
+        "touches": 1,
+        "completions": 0,
+        "drops": 0,
+        "turnovers": 0,
+        "blocks": 0,
+        "goals": 0,
+        "assists": 0
+      }
+    }
+  }
+}
