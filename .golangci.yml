@@ -1,0 +1,83 @@
+# Strict Go lint gate for the server module, per docs/testing.md.
+#
+# Run through `npm run lint` (scripts/lint.sh) from the repo root; golangci-lint
+# resolves this file from server/ by walking up to the repo root.
+# Requires a golangci-lint binary built with Go >= 1.27 (the server module's
+# target). The v1.64.8 binary installed in this environment was built with Go
+# 1.25 and aborts on this module ("package requires newer Go version go1.27");
+# upgrading the tool is pending dependency approval.
+run:
+  timeout: 5m
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - staticcheck
+    - gosimple
+    - stylecheck
+    - ineffassign
+    - unused
+    - revive
+    - gocritic
+    - gosec
+    - exhaustive
+    - nilerr
+    - misspell
+    - gofmt
+    - gofumpt
+
+  settings:
+    govet:
+      enable-all: true
+    staticcheck:
+      checks: ["all"]
+    gosimple:
+      checks: ["all"]
+    stylecheck:
+      checks: ["all"]
+    revive:
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: early-return
+        - name: empty-block
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+        - name: increment-decrement
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: var-declaration
+        - name: var-naming
+    gocritic:
+      # All stable check groups: the high bar from docs/testing.md.
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+    gosec:
+      excludes: []
+    exhaustive:
+      default-signifies-exhaustive: true
+
+issues:
+  # No default exclusion presets: every finding is an error.
+  exclude-use-default: false
+  # buf-generated .pb.go / .connect.go carry the standard "Code generated"
+  # marker. Generated code is not hand-edited, so it is not linted (it is still
+  # compiled and typechecked by `go build` / `go test`).
+  exclude-generated: lax
+  max-issues-per-linter: 0
+  max-same-issues: 0

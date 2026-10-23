@@ -28,7 +28,8 @@ func Slug(name string) string {
 		r = stripDiacritic(r)
 		switch {
 		case r >= 'a' && r <= 'z', r >= '0' && r <= '9':
-			b.WriteRune(r)
+			// strings.Builder writes never fail.
+			_, _ = b.WriteRune(r)
 			hyphen = false
 		case unicode.IsLetter(r) || unicode.IsDigit(r):
 			// A letter we couldn't transliterate: drop it, but keep it from
@@ -36,7 +37,8 @@ func Slug(name string) string {
 			hyphen = true
 		default:
 			if !hyphen {
-				b.WriteByte('-')
+				// strings.Builder writes never fail.
+				_ = b.WriteByte('-')
 				hyphen = true
 			}
 		}

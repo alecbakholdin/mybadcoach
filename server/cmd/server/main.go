@@ -17,5 +17,7 @@ func initialViewLine() string {
 }
 
 func main() {
-	fmt.Println(initialViewLine())
+	// A failed write to stdout leaves nothing useful to report or exit for in
+	// this one-shot stub.
+	_, _ = fmt.Println(initialViewLine())
 }

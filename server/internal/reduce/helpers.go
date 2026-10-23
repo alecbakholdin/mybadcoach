@@ -16,8 +16,8 @@ func PrepareEvents(events []MatchEvent) []MatchEvent {
 	}
 
 	sort.SliceStable(live, func(i, j int) bool {
-		if live[i].EffectiveTs != live[j].EffectiveTs {
-			return live[i].EffectiveTs < live[j].EffectiveTs
+		if live[i].EffectiveTS != live[j].EffectiveTS {
+			return live[i].EffectiveTS < live[j].EffectiveTS
 		}
 		return live[i].ID < live[j].ID
 	})

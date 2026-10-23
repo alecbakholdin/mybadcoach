@@ -14,6 +14,8 @@
     "test": "npm run test:shared && npm run test:server",
     "test:shared": "npm run test -w packages/shared",
     "test:server": "cd server && go test ./...",
+    "lint": "bash scripts/lint.sh",
+    "generate": "bash scripts/generate.sh",
     "dev": "bash scripts/dev.sh",
     "build:server": "cd server && go build -o ../dist/server ./cmd/server",
     "dev:client": "npm run dev -w apps/client",

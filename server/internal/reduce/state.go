@@ -3,6 +3,7 @@ package reduce
 // StartingRole is whether we start a point on offense or defense.
 type StartingRole string
 
+// Starting-role constants.
 const (
 	Offense StartingRole = "OFFENSE"
 	Defense StartingRole = "DEFENSE"
@@ -11,6 +12,7 @@ const (
 // View is the current phase of a point.
 type View string
 
+// View constants, in point lifecycle order.
 const (
 	ViewLineupSetup       View = "LINEUP_SETUP"
 	ViewPullWait          View = "PULL_WAIT"
@@ -41,11 +43,6 @@ type PointDerivedState struct {
 	Lineup      []string               `json:"lineup"`
 	Thrower     string                 `json:"thrower"`
 	PlayerStats map[string]PlayerStats `json:"playerStats"`
-}
-
-// emptyPlayerStats returns a zero-filled PlayerStats value.
-func emptyPlayerStats() PlayerStats {
-	return PlayerStats{}
 }
 
 // InitialPointState is the state every point starts in.

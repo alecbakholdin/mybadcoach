@@ -25,6 +25,9 @@ profile.cov
 go.work
 go.work.sum
 
+# Locally installed pinned dev tools (scripts/install-tools.sh)
+.tools/
+
 # env file
 .env
 

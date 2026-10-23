@@ -45,8 +45,8 @@ func TestPrepareEventsDeduplicatesByIDKeepingFirstAfterSort(t *testing.T) {
 	if len(prepared) != 1 {
 		t.Fatalf("prepared %d events, want 1", len(prepared))
 	}
-	if prepared[0].EffectiveTs != 1000 {
-		t.Fatalf("kept event effectiveTs = %d, want the first after sorting (1000)", prepared[0].EffectiveTs)
+	if prepared[0].EffectiveTS != 1000 {
+		t.Fatalf("kept event effectiveTs = %d, want the first after sorting (1000)", prepared[0].EffectiveTS)
 	}
 }
 

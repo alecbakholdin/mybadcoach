@@ -11,6 +11,7 @@ import "encoding/json"
 // declared in the same order as MATCH_EVENT_TYPES in packages/shared/src/events.ts.
 type EventType string
 
+// Match event type constants.
 const (
 	EventTouch            EventType = "TOUCH"
 	EventDrop             EventType = "DROP"
@@ -72,12 +73,15 @@ type PullPayload struct {
 // MatchEvent is an atomic, time-ordered, idempotent-by-id gameplay event.
 // Payload is decoded according to Type.
 type MatchEvent struct {
+	// Pointer-bearing fields come first so the garbage collector scans the
+	// smallest possible prefix (fieldalignment); JSON order is irrelevant
+	// because canonical comparison sorts object keys.
 	ID          string          `json:"id"`
 	MatchID     string          `json:"matchId"`
-	PointNumber int             `json:"pointNumber"`
-	EffectiveTs int64           `json:"effectiveTs"`
 	CreatedAt   string          `json:"createdAt"`
-	Deleted     bool            `json:"deleted"`
 	Type        EventType       `json:"type"`
 	Payload     json.RawMessage `json:"payload"`
+	PointNumber int             `json:"pointNumber"`
+	EffectiveTS int64           `json:"effectiveTs"`
+	Deleted     bool            `json:"deleted"`
 }

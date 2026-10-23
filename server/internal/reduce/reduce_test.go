@@ -14,12 +14,12 @@ func payload(value any) json.RawMessage {
 	return encoded
 }
 
-func touchEvent(id string, effectiveTs int64, playerID string) MatchEvent {
+func touchEvent(id string, effectiveTS int64, playerID string) MatchEvent {
 	return MatchEvent{
 		ID:          id,
 		MatchID:     "match-1",
 		PointNumber: 1,
-		EffectiveTs: effectiveTs,
+		EffectiveTS: effectiveTS,
 		CreatedAt:   "2026-03-14T09:00:00Z",
 		Deleted:     false,
 		Type:        EventTouch,
@@ -27,12 +27,12 @@ func touchEvent(id string, effectiveTs int64, playerID string) MatchEvent {
 	}
 }
 
-func lineupEvent(id string, effectiveTs int64, playerIDs ...string) MatchEvent {
+func lineupEvent(id string, effectiveTS int64, playerIDs ...string) MatchEvent {
 	return MatchEvent{
 		ID:          id,
 		MatchID:     "match-1",
 		PointNumber: 1,
-		EffectiveTs: effectiveTs,
+		EffectiveTS: effectiveTS,
 		CreatedAt:   "2026-03-14T09:00:00Z",
 		Deleted:     false,
 		Type:        EventSetLineup,

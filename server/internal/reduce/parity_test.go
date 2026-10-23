@@ -1,7 +1,9 @@
 package reduce
 
 import (
+	"bytes"
 	"encoding/json"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
@@ -47,7 +49,8 @@ func loadFixtures(t *testing.T) map[string]fixtureFile {
 	t.Helper()
 
 	dir := fixturesDir(t)
-	entries, err := os.ReadDir(dir)
+	fsys := os.DirFS(dir)
+	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {
 		t.Fatalf("read fixtures directory: %v", err)
 	}
@@ -57,7 +60,7 @@ func loadFixtures(t *testing.T) map[string]fixtureFile {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		raw, err := fs.ReadFile(fsys, entry.Name())
 		if err != nil {
 			t.Fatalf("read fixture %s: %v", entry.Name(), err)
 		}
@@ -121,7 +124,7 @@ func TestParityFixtures(t *testing.T) {
 func canonicalJSON(t *testing.T, raw []byte) string {
 	t.Helper()
 
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.UseNumber()
 
 	var value any
@@ -145,33 +148,33 @@ func writeCanonical(t *testing.T, builder *strings.Builder, value any) {
 		}
 		sort.Strings(keys)
 
-		builder.WriteByte('{')
+		_ = builder.WriteByte('{')
 		for index, key := range keys {
 			if index > 0 {
-				builder.WriteByte(',')
+				_ = builder.WriteByte(',')
 			}
-			builder.WriteString(strconv.Quote(key))
-			builder.WriteByte(':')
+			_, _ = builder.WriteString(strconv.Quote(key))
+			_ = builder.WriteByte(':')
 			writeCanonical(t, builder, typed[key])
 		}
-		builder.WriteByte('}')
+		_ = builder.WriteByte('}')
 	case []any:
-		builder.WriteByte('[')
+		_ = builder.WriteByte('[')
 		for index, entry := range typed {
 			if index > 0 {
-				builder.WriteByte(',')
+				_ = builder.WriteByte(',')
 			}
 			writeCanonical(t, builder, entry)
 		}
-		builder.WriteByte(']')
+		_ = builder.WriteByte(']')
 	case json.Number:
-		builder.WriteString(typed.String())
+		_, _ = builder.WriteString(typed.String())
 	case string:
-		builder.WriteString(strconv.Quote(typed))
+		_, _ = builder.WriteString(strconv.Quote(typed))
 	case bool:
-		builder.WriteString(strconv.FormatBool(typed))
+		_, _ = builder.WriteString(strconv.FormatBool(typed))
 	case nil:
-		builder.WriteString("null")
+		_, _ = builder.WriteString("null")
 	default:
 		t.Fatalf("unsupported JSON value %T", value)
 	}
