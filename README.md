@@ -32,6 +32,7 @@ fixtures.
 | `npm test`              | Run both test suites: `test:shared` then `test:server`.                                       |
 | `npm run test:shared`   | Typecheck and run the shared TypeScript suite (Vitest), including all 24 parity fixtures.      |
 | `npm run test:server`   | Run the Go server suite (`go test ./...`), including the same 24 parity fixtures.              |
+| `npm run dev`           | Run the Go server and the SvelteKit client dev server together (server is a one-shot stub for now). |
 | `npm run build:server`  | Build the Go server binary to `dist/server`.                                                   |
 | `npm run dev:client`    | Start the SvelteKit client dev server.                                                         |
 | `npm run build:client`  | Build the SvelteKit client for production.                                                     |
