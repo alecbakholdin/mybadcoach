@@ -4,11 +4,10 @@ Every direct dependency is listed here for approval review. This file is the
 single place to audit the set: npm packages, Go modules, Docker base images,
 and CI actions. See the dependency policy in `docs/testing.md` and `CLAUDE.md`.
 
-Status: the Go/npm backend set below predates ticket 06 and was approved with
-the backend-api map. Ticket 06 adds the container, e2e, and CI categories.
-Playwright (`@playwright/test` and the `mcr.microsoft.com/playwright` image) was
-approved by Alec on 2026-10-23; the remaining Docker base images and CI actions
-(marked **new**) still await his review.
+Status: approved. The Go/npm backend set below predates ticket 06 and was
+approved with the backend-api map. The container, e2e, and CI categories added
+by ticket 06 (Playwright, Docker base images, and CI actions) were approved by
+Alec on 2026-10-23.
 
 ## npm packages
 
@@ -32,9 +31,9 @@ All images are pinned by tag; none use `latest`.
 
 | Image | Version tag | Used by | Purpose | New |
 | --- | --- | --- | --- | --- |
-| `golang` | `1.27.3-alpine` | server build stage, devcontainer | Compiles `./cmd/server` (also matches `server/go.mod`'s `toolchain go1.27.3`). | **new (ticket 06)** |
-| `alpine` | `3.21` | server runtime stage | Minimal runtime for the static Go binary; supplies `nc` for the healthcheck. | **new (ticket 06)** |
-| `node` | `22.22-alpine` | client build/runtime stage, devcontainer | Builds and previews the SvelteKit client; matches the root `engines.node` floor. | **new (ticket 06)** |
+| `golang` | `1.27.3-alpine` | server build stage, devcontainer | Compiles `./cmd/server` (also matches `server/go.mod`'s `toolchain go1.27.3`). | **approved 2026-10-23** |
+| `alpine` | `3.21` | server runtime stage | Minimal runtime for the static Go binary; supplies `nc` for the healthcheck. | **approved 2026-10-23** |
+| `node` | `22.22-alpine` | client build/runtime stage, devcontainer | Builds and previews the SvelteKit client; matches the root `engines.node` floor. | **approved 2026-10-23** |
 | `mcr.microsoft.com/playwright` | `v1.64.1-noble` | e2e runner | Official Playwright image; bundles the Chromium build matching `@playwright/test@1.64.1` so CI installs no browsers. | **approved 2026-10-23** |
 
 Alternatives considered: `gcr.io/distroless/static` for the server runtime
@@ -53,9 +52,9 @@ and `docker-cli-compose`.
 
 | Action | Version | Purpose | New |
 | --- | --- | --- | --- |
-| `actions/checkout` | `v4` | Clone the repo. | **new (ticket 06)** |
-| `actions/setup-go` | `v5` | Install Go 1.27.3 with module cache. | **new (ticket 06)** |
-| `actions/setup-node` | `v4` | Install Node 22.22 with npm cache. | **new (ticket 06)** |
+| `actions/checkout` | `v4` | Clone the repo. | **approved 2026-10-23** |
+| `actions/setup-go` | `v5` | Install Go 1.27.3 with module cache. | **approved 2026-10-23** |
+| `actions/setup-node` | `v4` | Install Node 22.22 with npm cache. | **approved 2026-10-23** |
 
 These are the standard first-party GitHub actions; no third-party action is
 used.
