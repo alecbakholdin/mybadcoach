@@ -31,6 +31,12 @@ go.work.sum
 # env file
 .env
 
+# Local dev SQLite database (server default DSN is mbc.db; WAL mode adds
+# -wal and -shm sidecar files while the server runs).
+mbc.db
+mbc.db-shm
+mbc.db-wal
+
 # Node / npm
 node_modules/
 dist/
