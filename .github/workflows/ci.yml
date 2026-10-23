@@ -10,9 +10,13 @@ on:
 permissions:
   contents: read
 
+# Every job is independent: no `needs` chains, so each check runs in parallel
+# and shows up as its own status on the PR. Frontend (TypeScript) and backend
+# (Go) are split, and lint is split into Go vs protobuf.
+
 jobs:
-  lint:
-    name: Lint (Go, buf)
+  lint-go:
+    name: Lint (Go)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,17 +24,11 @@ jobs:
         with:
           go-version: "1.27.3"
           cache-dependency-path: server/go.sum
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22.22"
-          cache: npm
-      - run: npm ci
-      - run: bash scripts/install-tools.sh
-      - run: npm run lint
+      - run: bash scripts/install-tools.sh golangci-lint
+      - run: bash scripts/lint.sh go
 
-  test:
-    name: Unit and parity (TypeScript + Go)
-    needs: lint
+  lint-buf:
+    name: Lint (protobuf)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,16 +36,23 @@ jobs:
         with:
           go-version: "1.27.3"
           cache-dependency-path: server/go.sum
+      - run: bash scripts/install-tools.sh buf
+      - run: bash scripts/lint.sh buf
+
+  test-shared:
+    name: Test (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "22.22"
           cache: npm
       - run: npm ci
-      - run: npm test
+      - run: npm run test:shared
 
-  integration:
-    name: Backend integration (real SQLite)
-    needs: test
+  test-go:
+    name: Test (Go)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,9 +63,32 @@ jobs:
       - run: go test ./...
         working-directory: server
 
+  build-client:
+    name: Build (client)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build:client
+
+  build-server:
+    name: Build (server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.3"
+          cache-dependency-path: server/go.sum
+      - run: go build ./cmd/server
+        working-directory: server
+
   e2e:
     name: Full-stack e2e (docker compose)
-    needs: integration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
