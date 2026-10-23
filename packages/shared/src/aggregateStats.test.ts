@@ -4,7 +4,6 @@ import {
   aggregateCareerStats,
   aggregateEventStats,
   aggregateMatchStats,
-  computeTeamRecord,
 } from './aggregateStats';
 import type { PlayerStatLine } from './aggregateStats';
 import type {
@@ -15,6 +14,7 @@ import type {
 import { reducePoint } from './reducer';
 import type { PlayerStats, PointDerivedState } from './state';
 import { emptyPlayerStats } from './state';
+import { computeTeamRecord } from './teamRecord';
 
 /** Build a MatchEvent for the end-to-end aggregation test. */
 function event<K extends MatchEventType>(
@@ -284,7 +284,7 @@ describe('aggregateMatchStats over reducer output', () => {
     ];
 
     // Point 3: a catches an opponent turnover, then throws it away. The
-    // cleared thrower means the catch credits no completion.
+    // cleared thrower means the touch credits no completion.
     const point3 = [
       event('p3-lineup', 3_000, 3, 'SET_LINEUP', { playerIds: ['player-a'] }),
       event('p3-opponent-turnover', 3_100, 3, 'OPPONENT_TURNOVER', {}),

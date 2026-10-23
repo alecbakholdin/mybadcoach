@@ -1,5 +1,5 @@
 {
-  "name": "turnovers clear the thrower so the next catch is not a completion",
+  "name": "turnovers clear the thrower so the next touch is not a completion",
   "initialRole": "OFFENSE",
   "events": [
     {

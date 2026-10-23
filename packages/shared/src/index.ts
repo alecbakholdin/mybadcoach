@@ -4,3 +4,4 @@ export * from './events';
 export * from './helpers';
 export * from './reducer';
 export * from './state';
+export * from './teamRecord';

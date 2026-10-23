@@ -1,7 +1,21 @@
 import type { MatchEvent } from './events';
 import { prepareEvents } from './helpers';
-import type { PointDerivedState, StartingRole } from './state';
+import type { PlayerStats, PointDerivedState, StartingRole } from './state';
 import { emptyPlayerStats, initialPointState } from './state';
+
+/**
+ * Credit one base stat to a player, zero-filling their entry on first credit.
+ * Mirrors CreditBaseStat in server/internal/reduce/reduce.go.
+ */
+function creditBaseStat(
+  state: PointDerivedState,
+  playerId: string,
+  field: keyof PlayerStats,
+): void {
+  const stats = state.playerStats[playerId] ?? emptyPlayerStats();
+  stats[field] += 1;
+  state.playerStats[playerId] = stats;
+}
 
 /**
  * Fold a point's MatchEvent log into derived state.
@@ -23,17 +37,13 @@ export function reducePoint(
     switch (event.type) {
       case 'TOUCH': {
         const receiverId = event.payload.playerId;
-        // A catch by a different player completes the previous throw. This is
+        // A touch by a different player completes the previous throw. This is
         // the only way completions enter the log: there is no PASS event.
         // A same-player touch (e.g. regaining a tipped disc) is not a pass.
         if (state.thrower !== '' && state.thrower !== receiverId) {
-          const throwerStats = state.playerStats[state.thrower] ?? emptyPlayerStats();
-          throwerStats.completions += 1;
-          state.playerStats[state.thrower] = throwerStats;
+          creditBaseStat(state, state.thrower, 'completions');
         }
-        const stats = state.playerStats[receiverId] ?? emptyPlayerStats();
-        stats.touches += 1;
-        state.playerStats[receiverId] = stats;
+        creditBaseStat(state, receiverId, 'touches');
         state.thrower = receiverId;
         state.view = 'OFFENSE_POSSESSION';
         break;
@@ -41,9 +51,7 @@ export function reducePoint(
       case 'DROP': {
         // A drop is a receiver fault: credit only the receiver, never the
         // thrower (no completion, no turnover). We no longer have the disc.
-        const stats = state.playerStats[event.payload.playerId] ?? emptyPlayerStats();
-        stats.drops += 1;
-        state.playerStats[event.payload.playerId] = stats;
+        creditBaseStat(state, event.payload.playerId, 'drops');
         state.thrower = '';
         state.view = 'DEFENSE_ACTIVE';
         break;
@@ -51,9 +59,7 @@ export function reducePoint(
       case 'TURNOVER': {
         // The event names the thrower responsible for the throwaway, stall,
         // or other thrower fault. The throw itself is not a completion.
-        const stats = state.playerStats[event.payload.playerId] ?? emptyPlayerStats();
-        stats.turnovers += 1;
-        state.playerStats[event.payload.playerId] = stats;
+        creditBaseStat(state, event.payload.playerId, 'turnovers');
         state.thrower = '';
         state.view = 'DEFENSE_ACTIVE';
         break;
@@ -63,9 +69,7 @@ export function reducePoint(
         // the thrower: the next TOUCH must not credit the blocker a
         // completion. If the blocker caught it, that TOUCH sets them as
         // thrower.
-        const stats = state.playerStats[event.payload.playerId] ?? emptyPlayerStats();
-        stats.blocks += 1;
-        state.playerStats[event.payload.playerId] = stats;
+        creditBaseStat(state, event.payload.playerId, 'blocks');
         state.thrower = '';
         state.view = 'OFFENSE_POSSESSION';
         break;
@@ -80,19 +84,15 @@ export function reducePoint(
       }
       case 'SCORE': {
         // A goal credits only the goal and, when present, the assist. The
-        // scoring catch's touch/completion, if recorded, came from a
-        // preceding TOUCH event. The event is terminal for the point.
-        const scorerStats = state.playerStats[event.payload.playerId] ?? emptyPlayerStats();
-        scorerStats.goals += 1;
-        state.playerStats[event.payload.playerId] = scorerStats;
+        // scorer's touch/completion, if recorded, came from a preceding TOUCH
+        // event. The event is terminal for the point.
+        creditBaseStat(state, event.payload.playerId, 'goals');
 
         // Callahan guard: "" means a defensive score (GLOSSARY: Callahan).
         // Never fall back to the current thrower for an assist or completion,
         // and never charge a turnover to anybody.
         if (event.payload.assistPlayerId !== '') {
-          const assistStats = state.playerStats[event.payload.assistPlayerId] ?? emptyPlayerStats();
-          assistStats.assists += 1;
-          state.playerStats[event.payload.assistPlayerId] = assistStats;
+          creditBaseStat(state, event.payload.assistPlayerId, 'assists');
         }
 
         state.thrower = '';

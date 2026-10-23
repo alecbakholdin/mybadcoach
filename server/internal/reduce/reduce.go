@@ -2,6 +2,19 @@ package reduce
 
 import "encoding/json"
 
+// CreditBaseStat increments one base stat for a player, zero-filling their
+// entry on first credit. Mirrors creditBaseStat in
+// packages/shared/src/reducer.ts.
+func CreditBaseStat(
+	playerStats map[string]PlayerStats,
+	playerID string,
+	apply func(*PlayerStats),
+) {
+	stats := playerStats[playerID]
+	apply(&stats)
+	playerStats[playerID] = stats
+}
+
 // ReducePoint folds a point's MatchEvent log into derived state.
 //
 // The log is filtered, sorted by effective time, and deduplicated by id before
@@ -19,19 +32,19 @@ func ReducePoint(events []MatchEvent, initialRole StartingRole) PointDerivedStat
 			var touch TouchPayload
 			_ = json.Unmarshal(event.Payload, &touch)
 
-			// A catch by a different player completes the previous throw. This
+			// A touch by a different player completes the previous throw. This
 			// is the only way completions enter the log: there is no PASS
 			// event. A same-player touch (e.g. regaining a tipped disc) is not
 			// a pass.
 			if state.Thrower != "" && state.Thrower != touch.PlayerID {
-				throwerStats := state.PlayerStats[state.Thrower]
-				throwerStats.Completions++
-				state.PlayerStats[state.Thrower] = throwerStats
+				CreditBaseStat(state.PlayerStats, state.Thrower, func(stats *PlayerStats) {
+					stats.Completions++
+				})
 			}
 
-			stats := state.PlayerStats[touch.PlayerID]
-			stats.Touches++
-			state.PlayerStats[touch.PlayerID] = stats
+			CreditBaseStat(state.PlayerStats, touch.PlayerID, func(stats *PlayerStats) {
+				stats.Touches++
+			})
 			state.Thrower = touch.PlayerID
 			state.View = ViewOffensePossession
 
@@ -41,9 +54,9 @@ func ReducePoint(events []MatchEvent, initialRole StartingRole) PointDerivedStat
 
 			// A drop is a receiver fault: credit only the receiver, never the
 			// thrower (no completion, no turnover). We no longer have the disc.
-			stats := state.PlayerStats[drop.PlayerID]
-			stats.Drops++
-			state.PlayerStats[drop.PlayerID] = stats
+			CreditBaseStat(state.PlayerStats, drop.PlayerID, func(stats *PlayerStats) {
+				stats.Drops++
+			})
 			state.Thrower = ""
 			state.View = ViewDefenseActive
 
@@ -54,9 +67,9 @@ func ReducePoint(events []MatchEvent, initialRole StartingRole) PointDerivedStat
 			// The event names the thrower responsible for the throwaway,
 			// stall, or other thrower fault. The throw itself is not a
 			// completion.
-			stats := state.PlayerStats[turnover.PlayerID]
-			stats.Turnovers++
-			state.PlayerStats[turnover.PlayerID] = stats
+			CreditBaseStat(state.PlayerStats, turnover.PlayerID, func(stats *PlayerStats) {
+				stats.Turnovers++
+			})
 			state.Thrower = ""
 			state.View = ViewDefenseActive
 
@@ -68,9 +81,9 @@ func ReducePoint(events []MatchEvent, initialRole StartingRole) PointDerivedStat
 			// clear the thrower: the next TOUCH must not credit the blocker a
 			// completion. If the blocker caught it, that TOUCH sets them as
 			// thrower.
-			stats := state.PlayerStats[block.PlayerID]
-			stats.Blocks++
-			state.PlayerStats[block.PlayerID] = stats
+			CreditBaseStat(state.PlayerStats, block.PlayerID, func(stats *PlayerStats) {
+				stats.Blocks++
+			})
 			state.Thrower = ""
 			state.View = ViewOffensePossession
 
@@ -86,19 +99,19 @@ func ReducePoint(events []MatchEvent, initialRole StartingRole) PointDerivedStat
 			_ = json.Unmarshal(event.Payload, &score)
 
 			// A goal credits only the goal and, when present, the assist. The
-			// scoring catch's touch/completion, if recorded, came from a
-			// preceding TOUCH event. The event is terminal for the point.
-			scorerStats := state.PlayerStats[score.PlayerID]
-			scorerStats.Goals++
-			state.PlayerStats[score.PlayerID] = scorerStats
+			// scorer's touch/completion, if recorded, came from a preceding
+			// TOUCH event. The event is terminal for the point.
+			CreditBaseStat(state.PlayerStats, score.PlayerID, func(stats *PlayerStats) {
+				stats.Goals++
+			})
 
 			// Callahan guard: "" means a defensive score (GLOSSARY:
 			// Callahan). Never fall back to the current thrower for an assist
 			// or completion, and never charge a turnover to anybody.
 			if score.AssistPlayerID != "" {
-				assistStats := state.PlayerStats[score.AssistPlayerID]
-				assistStats.Assists++
-				state.PlayerStats[score.AssistPlayerID] = assistStats
+				CreditBaseStat(state.PlayerStats, score.AssistPlayerID, func(stats *PlayerStats) {
+					stats.Assists++
+				})
 			}
 
 			state.Thrower = ""

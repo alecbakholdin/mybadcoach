@@ -284,8 +284,8 @@ Shared conventions:
    then SCORE counts both parts, while one recorded as SCORE alone counts only the goal/assist.
    **Callahan guard:** `assistPlayerId: ""` means a defensive score (GLOSSARY: Callahan). The reducer
    must not fall back to the current `thrower` for an assist or completion, and must not charge a
-   turnover to any player; a SCORE event changes no `turnovers` value (USAU 13: a goal is a catch in
-   the end zone, not a throw).
+   turnover to any player; a SCORE event changes no `turnovers` value (USAU 13: a goal is scored by
+   catching the disc in the end zone, not by throwing it).
 6. **SUB_PLAYER** — Credits no stats. Replaces the first occurrence of `playerOutId` in `lineup` with
    `playerInId`, preserving field order and lineup size, including a full seven-player lineup (USAU
    9.C: at most seven players on the field). If `playerOutId` is the current `thrower`, the incoming
@@ -304,7 +304,7 @@ These extend the two event types that already had tracer fixtures; they are pinn
 as well.
 
 - **TOUCH** — Credits `touches + 1` to the receiver. If a different player was the current `thrower`,
-  that thrower also gets `completions + 1`: the catch is the only evidence of a completed pass, since
+  that thrower also gets `completions + 1`: the touch is the only evidence of a completed pass, since
   there is no PASS event (USAU 3.N.5: a throw is complete when the team retains possession). A
   same-player TOUCH never credits a self-completion. Sets `thrower` to the receiver and `view` to
   `OFFENSE_POSSESSION`.
