@@ -40,7 +40,9 @@ message GetPlayerResponse {
 message UpdatePlayerRequest {
   string team_slug = 1;
   string player_slug = 2;
-  optional repeated string names = 3; // replaces wholesale when present
+  // Replaces the whole list when non-empty. Proto3 repeated fields have no
+  // presence, so an empty list means "leave names unchanged".
+  repeated string names = 3;
 }
 
 message UpdatePlayerResponse {

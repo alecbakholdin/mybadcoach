@@ -1,0 +1,16 @@
+version: v2
+managed:
+  enabled: true
+  override:
+    - file_option: go_package_prefix
+      value: github.com/alecbakholdin/mybadcoach/server/internal/gen
+plugins:
+  - remote: buf.build/protocolbuffers/go:v1.36.12
+    out: ../server/internal/gen
+    opt: paths=source_relative
+  - remote: buf.build/connectrpc/go:v1.19.1
+    out: ../server/internal/gen
+    opt: paths=source_relative
+  - remote: buf.build/bufbuild/es:v2.16.0
+    out: ../packages/shared/src/gen
+    opt: target=ts
