@@ -25,8 +25,17 @@ profile.cov
 go.work
 go.work.sum
 
+# Locally installed pinned dev tools (scripts/install-tools.sh)
+.tools/
+
 # env file
 .env
+
+# Local dev SQLite database (server default DSN is mbc.db; WAL mode adds
+# -wal and -shm sidecar files while the server runs).
+mbc.db
+mbc.db-shm
+mbc.db-wal
 
 # Node / npm
 node_modules/
@@ -34,6 +43,11 @@ dist/
 .svelte-kit/
 *.tsbuildinfo
 coverage/
+
+# Playwright (e2e)
+test-results/
+playwright-report/
+blob-report/
 
 # Editor/IDE
 # .idea/

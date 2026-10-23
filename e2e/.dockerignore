@@ -1,0 +1,5 @@
+# The e2e image installs the test package and receives only the suite sources.
+node_modules
+test-results
+playwright-report
+blob-report

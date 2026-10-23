@@ -1,21 +1,79 @@
 // Command server is the My Bad, Coach backend entry point.
-//
-// This tracer-bullet stub proves the binary imports and runs the shared point
-// reducer before any HTTP or persistence wiring (ticket 07).
 package main
 
 import (
-	"fmt"
+	"context"
+	"errors"
+	"log"
+	"net/http"
+	"os"
+	"time"
 
-	"github.com/alecbakholdin/mybadcoach/server/internal/reduce"
+	"github.com/alecbakholdin/mybadcoach/server/internal/api"
+	"github.com/alecbakholdin/mybadcoach/server/internal/db"
 )
 
-// initialViewLine reduces an empty point log and renders the initial view.
-func initialViewLine() string {
-	state := reduce.ReducePoint(nil, reduce.Offense)
-	return "Initial view: " + string(state.View)
-}
+const (
+	defaultAddr        = ":8080"
+	defaultDSN         = "mbc.db"
+	readHeaderTimeout  = 5 * time.Second
+	productionEnvValue = "production"
+)
 
 func main() {
-	fmt.Println(initialViewLine())
+	if err := run(); err != nil {
+		log.Fatalf("server: %v", err)
+	}
+}
+
+func run() error {
+	dsn := envOrDefault("MBC_DB_DSN", defaultDSN)
+	addr := envOrDefault("MBC_ADDR", defaultAddr)
+
+	// db.Open applies the embedded migrations before returning.
+	sqlDB, err := db.Open(dsn)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if closeErr := sqlDB.Close(); closeErr != nil {
+			log.Printf("close database: %v", closeErr)
+		}
+	}()
+
+	// The development seed bootstraps a well-known admin account, so it is
+	// unsafe in production. Gate it on both MBC_DEV_SEED=1 and a non-production
+	// MBC_ENV: even if the dev flag leaks into a production environment, the
+	// production build never seeds. db.Seed itself only checks the dev flag.
+	if os.Getenv("MBC_ENV") != productionEnvValue {
+		if seedErr := db.Seed(context.Background(), sqlDB); seedErr != nil {
+			return seedErr
+		}
+	}
+
+	handler, err := api.NewHandler(api.Config{
+		DB:            sqlDB,
+		SecureCookies: os.Getenv("MBC_ENV") == productionEnvValue,
+	})
+	if err != nil {
+		return err
+	}
+
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: readHeaderTimeout,
+	}
+	log.Printf("listening on %s", addr)
+	if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	return nil
+}
+
+func envOrDefault(name, fallback string) string {
+	if value := os.Getenv(name); value != "" {
+		return value
+	}
+	return fallback
 }

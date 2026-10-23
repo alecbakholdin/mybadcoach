@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package mybadcoach.seasons.v1;
+
+import "mybadcoach/players/v1/players.proto";
+
+// SeasonService (ticket 05): seasons + season rosters. DeleteSeason is owner-only
+// (hard delete, cascades to events/matches/gameplay). Roster entries are hard-deleted
+// (ADR-0005).
+service SeasonService {
+  rpc CreateSeason(CreateSeasonRequest) returns (CreateSeasonResponse);
+  rpc GetSeason(GetSeasonRequest) returns (GetSeasonResponse);
+  rpc UpdateSeason(UpdateSeasonRequest) returns (UpdateSeasonResponse);
+  rpc ListSeasons(ListSeasonsRequest) returns (ListSeasonsResponse);
+  rpc DeleteSeason(DeleteSeasonRequest) returns (DeleteSeasonResponse); // owner-only
+  rpc AddSeasonRosterEntry(AddSeasonRosterEntryRequest) returns (AddSeasonRosterEntryResponse);
+  rpc RemoveSeasonRosterEntry(RemoveSeasonRosterEntryRequest) returns (RemoveSeasonRosterEntryResponse);
+  rpc ListSeasonRoster(ListSeasonRosterRequest) returns (ListSeasonRosterResponse);
+  rpc CopySeasonRoster(CopySeasonRosterRequest) returns (CopySeasonRosterResponse);
+}
+
+message Season {
+  string id = 1;
+  string slug = 2;
+  string name = 3;
+  string start_date = 4; // ISO-8601 date
+  string end_date = 5; // ISO-8601 date
+}
+
+message CreateSeasonRequest {
+  string team_slug = 1;
+  string name = 2;
+  optional string start_date = 3;
+  optional string end_date = 4;
+}
+
+message CreateSeasonResponse {
+  Season season = 1;
+}
+
+message GetSeasonRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+}
+
+message GetSeasonResponse {
+  Season season = 1;
+}
+
+message UpdateSeasonRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  optional string name = 3;
+  optional string start_date = 4;
+  optional string end_date = 5;
+}
+
+message UpdateSeasonResponse {
+  Season season = 1;
+}
+
+message ListSeasonsRequest {
+  string team_slug = 1;
+  int32 offset = 2;
+  int32 limit = 3;
+}
+
+message ListSeasonsResponse {
+  repeated Season seasons = 1;
+  int64 total = 2;
+}
+
+message DeleteSeasonRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+}
+
+message DeleteSeasonResponse {}
+
+message AddSeasonRosterEntryRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string player_slug = 3;
+}
+
+message AddSeasonRosterEntryResponse {
+  mybadcoach.players.v1.Player player = 1;
+}
+
+message RemoveSeasonRosterEntryRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string player_slug = 3;
+}
+
+message RemoveSeasonRosterEntryResponse {}
+
+message ListSeasonRosterRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  int32 offset = 3;
+  int32 limit = 4;
+}
+
+message ListSeasonRosterResponse {
+  repeated mybadcoach.players.v1.Player players = 1;
+  int64 total = 2;
+}
+
+message CopySeasonRosterRequest {
+  string team_slug = 1;
+  string from_season_slug = 2;
+  string to_season_slug = 3;
+}
+
+message CopySeasonRosterResponse {
+  repeated mybadcoach.players.v1.Player copied = 1; // skips already-registered players
+}

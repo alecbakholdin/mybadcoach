@@ -1,0 +1,265 @@
+syntax = "proto3";
+
+package mybadcoach.matches.v1;
+
+// MatchService (tickets 05 + 06): matches plus the gameplay write/read path.
+// AppendMatchEvents is the only gameplay write path (live taps and offline replay
+// both flush through it). Edits are tombstone + corrected event composed
+// client-side; the server upserts by event id, the `deleted` flag is
+// last-writer-wins, and re-using an id with different content is invalid_argument
+// (id_conflict).
+//
+// Parity: snake_case proto field names emit the fixtures' camelCase JSON keys via
+// protojson (player_id -> playerId, player_out_id -> playerOutId, ...). The parity
+// harness maps fixture JSON into these generated types — including the short enum
+// names ("TOUCH" <-> MATCH_EVENT_TYPE_TOUCH, "LINEUP_SETUP" <-> VIEW_LINEUP_SETUP,
+// "OFFENSE" <-> STARTING_ROLE_OFFENSE) and the oneof payload member per event type.
+service MatchService {
+  rpc CreateMatch(CreateMatchRequest) returns (CreateMatchResponse);
+  rpc GetMatch(GetMatchRequest) returns (GetMatchResponse);
+  rpc UpdateMatch(UpdateMatchRequest) returns (UpdateMatchResponse);
+  rpc DeleteMatch(DeleteMatchRequest) returns (DeleteMatchResponse);
+  rpc ListMatches(ListMatchesRequest) returns (ListMatchesResponse);
+  rpc AppendMatchEvents(AppendMatchEventsRequest) returns (AppendMatchEventsResponse);
+  rpc ListMatchEvents(ListMatchEventsRequest) returns (ListMatchEventsResponse);
+  rpc GetMatchState(GetMatchStateRequest) returns (GetMatchStateResponse);
+  rpc GetMatchStats(GetMatchStatsRequest) returns (GetMatchStatsResponse);
+}
+
+message Match {
+  string id = 1;
+  string slug = 2;
+  string opponent_name = 3; // faceless opponent (ADR-0003)
+  string scheduled_at = 4; // ISO-8601
+  int64 point_cap = 5;
+}
+
+enum MatchEventType {
+  MATCH_EVENT_TYPE_UNSPECIFIED = 0;
+  MATCH_EVENT_TYPE_TOUCH = 1;
+  MATCH_EVENT_TYPE_DROP = 2;
+  MATCH_EVENT_TYPE_TURNOVER = 3;
+  MATCH_EVENT_TYPE_DEFENSIVE_BLOCK = 4;
+  MATCH_EVENT_TYPE_OPPONENT_TURNOVER = 5;
+  MATCH_EVENT_TYPE_SCORE = 6;
+  MATCH_EVENT_TYPE_SET_LINEUP = 7;
+  MATCH_EVENT_TYPE_SUB_PLAYER = 8;
+  MATCH_EVENT_TYPE_PULL = 9;
+}
+
+message TouchPayload {
+  string player_id = 1;
+}
+
+message DropPayload {
+  string player_id = 1;
+}
+
+message TurnoverPayload {
+  string player_id = 1;
+}
+
+message DefensiveBlockPayload {
+  string player_id = 1;
+}
+
+message OpponentTurnoverPayload {}
+
+message ScorePayload {
+  string player_id = 1;
+  string assist_player_id = 2; // "" = unassisted (Callahan guard, ADR-0003)
+}
+
+message SetLineupPayload {
+  repeated string player_ids = 1; // up to seven
+}
+
+message SubPlayerPayload {
+  string player_out_id = 1;
+  string player_in_id = 2;
+}
+
+message PullPayload {
+  string player_id = 1;
+}
+
+message MatchEvent {
+  string id = 1;
+  string match_id = 2;
+  int64 point_number = 3;
+  int64 effective_ts = 4; // epoch ms
+  string created_at = 5; // ISO-8601 UTC
+  bool deleted = 6; // event-log tombstone (parity contract)
+  MatchEventType type = 7;
+  oneof payload {
+    TouchPayload touch = 8;
+    DropPayload drop = 9;
+    TurnoverPayload turnover = 10;
+    DefensiveBlockPayload defensive_block = 11;
+    OpponentTurnoverPayload opponent_turnover = 12;
+    ScorePayload score = 13;
+    SetLineupPayload set_lineup = 14;
+    SubPlayerPayload sub_player = 15;
+    PullPayload pull = 16;
+  }
+}
+
+enum View {
+  VIEW_UNSPECIFIED = 0;
+  VIEW_LINEUP_SETUP = 1;
+  VIEW_PULL_WAIT = 2;
+  VIEW_DEFENSE_ACTIVE = 3;
+  VIEW_OFFENSE_POSSESSION = 4;
+  VIEW_SCORED = 5;
+}
+
+enum StartingRole {
+  STARTING_ROLE_UNSPECIFIED = 0;
+  STARTING_ROLE_OFFENSE = 1;
+  STARTING_ROLE_DEFENSE = 2;
+}
+
+message PlayerStats {
+  int64 touches = 1;
+  int64 completions = 2;
+  int64 drops = 3;
+  int64 turnovers = 4;
+  int64 blocks = 5;
+  int64 goals = 6;
+  int64 assists = 7;
+}
+
+message DerivedStats {
+  int64 receptions = 1;
+  int64 throw_attempts = 2;
+  int64 plus_minus = 3;
+}
+
+message PointDerivedState {
+  View view = 1;
+  StartingRole initial_role = 2;
+  repeated string lineup = 3; // in field order
+  string thrower = 4; // "" when absent
+  map<string, PlayerStats> player_stats = 5;
+}
+
+message MatchPointState {
+  int64 point_number = 1;
+  PointDerivedState state = 2;
+}
+
+message AggregatedPlayerStats {
+  string player_id = 1;
+  PlayerStats base = 2;
+  DerivedStats derived = 3;
+}
+
+message CreateMatchRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  string opponent_name = 4;
+  optional string scheduled_at = 5;
+  optional int64 point_cap = 6;
+}
+
+message CreateMatchResponse {
+  Match match = 1;
+}
+
+message GetMatchRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  string match_slug = 4;
+}
+
+message GetMatchResponse {
+  Match match = 1;
+}
+
+message UpdateMatchRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  string match_slug = 4;
+  optional string opponent_name = 5;
+  optional string scheduled_at = 6;
+  optional int64 point_cap = 7;
+}
+
+message UpdateMatchResponse {
+  Match match = 1;
+}
+
+message DeleteMatchRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  string match_slug = 4;
+}
+
+message DeleteMatchResponse {}
+
+message ListMatchesRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  int32 offset = 4;
+  int32 limit = 5;
+}
+
+message ListMatchesResponse {
+  repeated Match matches = 1;
+  int64 total = 2;
+}
+
+message AppendMatchEventsRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  string match_slug = 4;
+  repeated MatchEvent events = 5; // max 1000 per call
+}
+
+message AppendMatchEventsResponse {
+  repeated string accepted_ids = 1;
+  repeated string skipped_duplicate_ids = 2;
+}
+
+message ListMatchEventsRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  string match_slug = 4;
+  optional int64 point_number = 5;
+  int32 offset = 6;
+  int32 limit = 7;
+}
+
+message ListMatchEventsResponse {
+  repeated MatchEvent events = 1;
+  int64 total = 2;
+}
+
+message GetMatchStateRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  string match_slug = 4;
+}
+
+message GetMatchStateResponse {
+  repeated MatchPointState points = 1; // folded by reducePoint, in point order
+}
+
+message GetMatchStatsRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  string match_slug = 4;
+}
+
+message GetMatchStatsResponse {
+  repeated AggregatedPlayerStats player_stats = 1; // aggregateStats, match-scoped
+}

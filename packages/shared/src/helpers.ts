@@ -1,4 +1,4 @@
-import type { MatchEvent } from './events';
+import type { MatchEvent } from './gen/mybadcoach/matches/v1/matches_pb';
 
 /**
  * Prepare a raw MatchEvent log for reduction: filter -> sort -> dedupe.
@@ -8,12 +8,13 @@ import type { MatchEvent } from './events';
  * 3. Collapse duplicate ids, keeping the first event in that sorted order.
  *
  * The caller scopes the log to a point; this helper makes it deterministic and
- * replay-safe (ADR-0001).
+ * replay-safe (ADR-0001). `effectiveTs` is an int64 in the generated types, so
+ * the comparison is on bigint values.
  */
 export function prepareEvents(events: readonly MatchEvent[]): MatchEvent[] {
   const sorted = events.filter((event) => !event.deleted).sort((a, b) => {
     if (a.effectiveTs !== b.effectiveTs) {
-      return a.effectiveTs - b.effectiveTs;
+      return a.effectiveTs < b.effectiveTs ? -1 : 1;
     }
     // Deterministic tie-break so both language ports agree regardless of
     // input order.

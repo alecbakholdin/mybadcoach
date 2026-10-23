@@ -1,3 +1,4 @@
+import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -6,34 +7,101 @@ import {
   aggregateMatchStats,
 } from './aggregateStats';
 import type { PlayerStatLine } from './aggregateStats';
-import type {
-  MatchEvent,
-  MatchEventPayloadMap,
+import {
+  DefensiveBlockPayloadSchema,
+  MatchEventSchema,
   MatchEventType,
-} from './events';
+  OpponentTurnoverPayloadSchema,
+  PlayerStatsSchema,
+  PointDerivedStateSchema,
+  ScorePayloadSchema,
+  SetLineupPayloadSchema,
+  StartingRole,
+  TouchPayloadSchema,
+  TurnoverPayloadSchema,
+  View,
+} from './gen/mybadcoach/matches/v1/matches_pb';
+import type { MatchEvent, PointDerivedState } from './gen/mybadcoach/matches/v1/matches_pb';
 import { reducePoint } from './reducer';
-import type { PlayerStats, PointDerivedState } from './state';
-import { emptyPlayerStats } from './state';
 import { computeTeamRecord } from './teamRecord';
 
+const createdAt = '2026-03-14T09:00:00Z';
+
+type BaseStatName =
+  | 'touches'
+  | 'completions'
+  | 'drops'
+  | 'turnovers'
+  | 'blocks'
+  | 'goals'
+  | 'assists';
+
 /** Build a MatchEvent for the end-to-end aggregation test. */
-function event<K extends MatchEventType>(
+function event(
   id: string,
   effectiveTs: number,
   pointNumber: number,
-  type: K,
-  payload: MatchEventPayloadMap[K],
+  type: MatchEventType,
+  payload: MatchEvent['payload'],
 ): MatchEvent {
-  return {
+  return create(MatchEventSchema, {
     id,
     matchId: 'match-1',
-    pointNumber,
-    effectiveTs,
-    createdAt: '2026-03-14T09:00:00Z',
+    pointNumber: BigInt(pointNumber),
+    effectiveTs: BigInt(effectiveTs),
+    createdAt,
     deleted: false,
     type,
     payload,
-  } as MatchEvent;
+  });
+}
+
+function lineupEvent(id: string, effectiveTs: number, pointNumber: number, playerIds: string[]): MatchEvent {
+  return event(id, effectiveTs, pointNumber, MatchEventType.SET_LINEUP, {
+    case: 'setLineup',
+    value: create(SetLineupPayloadSchema, { playerIds }),
+  });
+}
+
+function touchEvent(id: string, effectiveTs: number, pointNumber: number, playerId: string): MatchEvent {
+  return event(id, effectiveTs, pointNumber, MatchEventType.TOUCH, {
+    case: 'touch',
+    value: create(TouchPayloadSchema, { playerId }),
+  });
+}
+
+function scoreEvent(
+  id: string,
+  effectiveTs: number,
+  pointNumber: number,
+  playerId: string,
+  assistPlayerId: string,
+): MatchEvent {
+  return event(id, effectiveTs, pointNumber, MatchEventType.SCORE, {
+    case: 'score',
+    value: create(ScorePayloadSchema, { playerId, assistPlayerId }),
+  });
+}
+
+function blockEvent(id: string, effectiveTs: number, pointNumber: number, playerId: string): MatchEvent {
+  return event(id, effectiveTs, pointNumber, MatchEventType.DEFENSIVE_BLOCK, {
+    case: 'defensiveBlock',
+    value: create(DefensiveBlockPayloadSchema, { playerId }),
+  });
+}
+
+function turnoverEvent(id: string, effectiveTs: number, pointNumber: number, playerId: string): MatchEvent {
+  return event(id, effectiveTs, pointNumber, MatchEventType.TURNOVER, {
+    case: 'turnover',
+    value: create(TurnoverPayloadSchema, { playerId }),
+  });
+}
+
+function opponentTurnoverEvent(id: string, effectiveTs: number, pointNumber: number): MatchEvent {
+  return event(id, effectiveTs, pointNumber, MatchEventType.OPPONENT_TURNOVER, {
+    case: 'opponentTurnover',
+    value: create(OpponentTurnoverPayloadSchema, {}),
+  });
 }
 
 /**
@@ -41,21 +109,37 @@ function event<K extends MatchEventType>(
  * zero-filled so tests only spell out the stats that matter to them.
  */
 function reducedPoint(
-  playerStats: Record<string, Partial<PlayerStats>>,
-  overrides: Partial<PointDerivedState> = {},
+  playerStats: Record<string, Partial<Record<BaseStatName, number>>>,
+  overrides: {
+    view?: View;
+    initialRole?: StartingRole;
+    lineup?: string[];
+    thrower?: string;
+  } = {},
 ): PointDerivedState {
-  const complete: Record<string, PlayerStats> = {};
+  const complete: Record<string, ReturnType<typeof playerStatsMessage>> = {};
   for (const [playerId, stats] of Object.entries(playerStats)) {
-    complete[playerId] = { ...emptyPlayerStats(), ...stats };
+    complete[playerId] = playerStatsMessage(stats);
   }
-  return {
-    view: 'SCORED',
-    initialRole: 'OFFENSE',
-    lineup: [],
-    thrower: '',
+  return create(PointDerivedStateSchema, {
+    view: overrides.view ?? View.SCORED,
+    initialRole: overrides.initialRole ?? StartingRole.OFFENSE,
+    lineup: overrides.lineup ?? [],
+    thrower: overrides.thrower ?? '',
     playerStats: complete,
-    ...overrides,
-  };
+  });
+}
+
+function playerStatsMessage(stats: Partial<Record<BaseStatName, number>>) {
+  return create(PlayerStatsSchema, {
+    touches: BigInt(stats.touches ?? 0),
+    completions: BigInt(stats.completions ?? 0),
+    drops: BigInt(stats.drops ?? 0),
+    turnovers: BigInt(stats.turnovers ?? 0),
+    blocks: BigInt(stats.blocks ?? 0),
+    goals: BigInt(stats.goals ?? 0),
+    assists: BigInt(stats.assists ?? 0),
+  });
 }
 
 describe('aggregateMatchStats', () => {
@@ -262,40 +346,32 @@ describe('aggregateMatchStats over reducer output', () => {
     // Point 1: a throws to b, who scores with a's assist. The completion is
     // credited on b's touch; the assist on the SCORE.
     const point1 = [
-      event('p1-lineup', 1_000, 1, 'SET_LINEUP', {
-        playerIds: ['player-a', 'player-b'],
-      }),
-      event('p1-touch-a', 1_100, 1, 'TOUCH', { playerId: 'player-a' }),
-      event('p1-touch-b', 1_200, 1, 'TOUCH', { playerId: 'player-b' }),
-      event('p1-score', 1_300, 1, 'SCORE', {
-        playerId: 'player-b',
-        assistPlayerId: 'player-a',
-      }),
+      lineupEvent('p1-lineup', 1_000, 1, ['player-a', 'player-b']),
+      touchEvent('p1-touch-a', 1_100, 1, 'player-a'),
+      touchEvent('p1-touch-b', 1_200, 1, 'player-b'),
+      scoreEvent('p1-score', 1_300, 1, 'player-b', 'player-a'),
     ];
 
     // Point 2: c blocks and scores unassisted — a callahan: goal only, no touch.
     const point2 = [
-      event('p2-lineup', 2_000, 2, 'SET_LINEUP', { playerIds: ['player-c'] }),
-      event('p2-block', 2_100, 2, 'DEFENSIVE_BLOCK', { playerId: 'player-c' }),
-      event('p2-score', 2_200, 2, 'SCORE', {
-        playerId: 'player-c',
-        assistPlayerId: '',
-      }),
+      lineupEvent('p2-lineup', 2_000, 2, ['player-c']),
+      blockEvent('p2-block', 2_100, 2, 'player-c'),
+      scoreEvent('p2-score', 2_200, 2, 'player-c', ''),
     ];
 
     // Point 3: a catches an opponent turnover, then throws it away. The
     // cleared thrower means the touch credits no completion.
     const point3 = [
-      event('p3-lineup', 3_000, 3, 'SET_LINEUP', { playerIds: ['player-a'] }),
-      event('p3-opponent-turnover', 3_100, 3, 'OPPONENT_TURNOVER', {}),
-      event('p3-touch-a', 3_200, 3, 'TOUCH', { playerId: 'player-a' }),
-      event('p3-turnover-a', 3_300, 3, 'TURNOVER', { playerId: 'player-a' }),
+      lineupEvent('p3-lineup', 3_000, 3, ['player-a']),
+      opponentTurnoverEvent('p3-opponent-turnover', 3_100, 3),
+      touchEvent('p3-touch-a', 3_200, 3, 'player-a'),
+      turnoverEvent('p3-turnover-a', 3_300, 3, 'player-a'),
     ];
 
     const stats = aggregateMatchStats([
-      reducePoint(point1, 'OFFENSE'),
-      reducePoint(point2, 'DEFENSE'),
-      reducePoint(point3, 'OFFENSE'),
+      reducePoint(point1, StartingRole.OFFENSE),
+      reducePoint(point2, StartingRole.DEFENSE),
+      reducePoint(point3, StartingRole.OFFENSE),
     ]);
 
     expect(stats).toEqual({

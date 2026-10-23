@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package mybadcoach.players.v1;
+
+// PlayerService (ticket 05). DeletePlayer is owner-only (hard delete; the gameplay
+// log is untouched, so historical stats stay derivable). Slugs are immutable
+// (ADR-0006); `names` is editable wholesale, display name first.
+service PlayerService {
+  rpc CreatePlayer(CreatePlayerRequest) returns (CreatePlayerResponse);
+  rpc GetPlayer(GetPlayerRequest) returns (GetPlayerResponse);
+  rpc UpdatePlayer(UpdatePlayerRequest) returns (UpdatePlayerResponse);
+  rpc DeletePlayer(DeletePlayerRequest) returns (DeletePlayerResponse); // owner-only
+  rpc ListPlayers(ListPlayersRequest) returns (ListPlayersResponse);
+}
+
+message Player {
+  string id = 1;
+  string slug = 2;
+  repeated string names = 3; // display name first, then aliases
+}
+
+message CreatePlayerRequest {
+  string team_slug = 1;
+  repeated string names = 2;
+}
+
+message CreatePlayerResponse {
+  Player player = 1;
+}
+
+message GetPlayerRequest {
+  string team_slug = 1;
+  string player_slug = 2;
+}
+
+message GetPlayerResponse {
+  Player player = 1;
+}
+
+message UpdatePlayerRequest {
+  string team_slug = 1;
+  string player_slug = 2;
+  // Replaces the whole list when non-empty. Proto3 repeated fields have no
+  // presence, so an empty list means "leave names unchanged".
+  repeated string names = 3;
+}
+
+message UpdatePlayerResponse {
+  Player player = 1;
+}
+
+message DeletePlayerRequest {
+  string team_slug = 1;
+  string player_slug = 2;
+}
+
+message DeletePlayerResponse {}
+
+message ListPlayersRequest {
+  string team_slug = 1;
+  int32 offset = 2;
+  int32 limit = 3;
+}
+
+message ListPlayersResponse {
+  repeated Player players = 1;
+  int64 total = 2;
+}

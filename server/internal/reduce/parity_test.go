@@ -1,13 +1,18 @@
 package reduce
 
 import (
+	"bytes"
 	"encoding/json"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/alecbakholdin/mybadcoach/server/internal/gameplay"
+	matchesv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/matches/v1"
 )
 
 var requiredFixtures = []string{
@@ -21,10 +26,10 @@ var requiredFixtures = []string{
 const expectedFixtureCount = 24
 
 type fixtureFile struct {
-	Name        string          `json:"name"`
-	InitialRole StartingRole    `json:"initialRole"`
-	Events      []MatchEvent    `json:"events"`
-	Expected    json.RawMessage `json:"expected"`
+	Name        string            `json:"name"`
+	InitialRole string            `json:"initialRole"`
+	Events      []json.RawMessage `json:"events"`
+	Expected    json.RawMessage   `json:"expected"`
 }
 
 // fixturesDir resolves the repo-root fixtures directory. `go test` runs with
@@ -47,7 +52,8 @@ func loadFixtures(t *testing.T) map[string]fixtureFile {
 	t.Helper()
 
 	dir := fixturesDir(t)
-	entries, err := os.ReadDir(dir)
+	fsys := os.DirFS(dir)
+	entries, err := fs.ReadDir(fsys, ".")
 	if err != nil {
 		t.Fatalf("read fixtures directory: %v", err)
 	}
@@ -57,7 +63,7 @@ func loadFixtures(t *testing.T) map[string]fixtureFile {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".json") {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+		raw, err := fs.ReadFile(fsys, entry.Name())
 		if err != nil {
 			t.Fatalf("read fixture %s: %v", entry.Name(), err)
 		}
@@ -92,16 +98,33 @@ func TestParityFixtures(t *testing.T) {
 	for _, name := range names {
 		fixture := fixtures[name]
 		t.Run(name, func(t *testing.T) {
-			actual := ReducePoint(fixture.Events, fixture.InitialRole)
+			role, err := gameplay.StartingRoleFromShortName(fixture.InitialRole)
+			if err != nil {
+				t.Fatalf("fixture %s: %v", name, err)
+			}
 
-			if actual.Lineup == nil {
+			events := make([]*matchesv1.MatchEvent, 0, len(fixture.Events))
+			for index, raw := range fixture.Events {
+				event, decodeErr := gameplay.MatchEventFromJSON(raw)
+				if decodeErr != nil {
+					t.Fatalf("fixture %s: decode event %d: %v", name, index, decodeErr)
+				}
+				events = append(events, event)
+			}
+
+			actual := ReducePoint(events, role)
+			if actual.GetLineup() == nil {
 				t.Fatal("lineup must never be nil")
 			}
-			if actual.PlayerStats == nil {
+			if actual.GetPlayerStats() == nil {
 				t.Fatal("playerStats must never be nil")
 			}
 
-			actualJSON, err := json.Marshal(actual)
+			fixtureState, err := gameplay.PointStateToJSON(actual)
+			if err != nil {
+				t.Fatalf("convert actual state: %v", err)
+			}
+			actualJSON, err := json.Marshal(fixtureState)
 			if err != nil {
 				t.Fatalf("marshal actual state: %v", err)
 			}
@@ -121,7 +144,7 @@ func TestParityFixtures(t *testing.T) {
 func canonicalJSON(t *testing.T, raw []byte) string {
 	t.Helper()
 
-	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.UseNumber()
 
 	var value any
@@ -145,33 +168,33 @@ func writeCanonical(t *testing.T, builder *strings.Builder, value any) {
 		}
 		sort.Strings(keys)
 
-		builder.WriteByte('{')
+		_ = builder.WriteByte('{')
 		for index, key := range keys {
 			if index > 0 {
-				builder.WriteByte(',')
+				_ = builder.WriteByte(',')
 			}
-			builder.WriteString(strconv.Quote(key))
-			builder.WriteByte(':')
+			_, _ = builder.WriteString(strconv.Quote(key))
+			_ = builder.WriteByte(':')
 			writeCanonical(t, builder, typed[key])
 		}
-		builder.WriteByte('}')
+		_ = builder.WriteByte('}')
 	case []any:
-		builder.WriteByte('[')
+		_ = builder.WriteByte('[')
 		for index, entry := range typed {
 			if index > 0 {
-				builder.WriteByte(',')
+				_ = builder.WriteByte(',')
 			}
 			writeCanonical(t, builder, entry)
 		}
-		builder.WriteByte(']')
+		_ = builder.WriteByte(']')
 	case json.Number:
-		builder.WriteString(typed.String())
+		_, _ = builder.WriteString(typed.String())
 	case string:
-		builder.WriteString(strconv.Quote(typed))
+		_, _ = builder.WriteString(strconv.Quote(typed))
 	case bool:
-		builder.WriteString(strconv.FormatBool(typed))
+		_, _ = builder.WriteString(strconv.FormatBool(typed))
 	case nil:
-		builder.WriteString("null")
+		_, _ = builder.WriteString("null")
 	default:
 		t.Fatalf("unsupported JSON value %T", value)
 	}

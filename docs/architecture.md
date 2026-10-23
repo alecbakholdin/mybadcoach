@@ -204,21 +204,25 @@ hierarchy: team slugs are globally unique; season and player slugs are unique wi
 slugs are unique within their season; match slugs are unique within their event. Collisions append a
 numeric suffix.
 
-## Planned SQLite schema
+## SQLite schema
 
-No DDL is committed in this milestone; this is the planned persistence model. It mirrors
-`docs/er-diagram.mmd` (the ER diagram is the source for this table). Gameplay is the `match_events`
-log; the other tables are pre-game structure.
+The schema of record is `server/internal/db/migrations/0001_initial.sql`, applied by the embedded
+migration runner when the server opens the database. It mirrors `docs/er-diagram.mmd` (the ER diagram
+is the source for this table). Gameplay is the `match_events` log; the other tables are pre-game
+structure and authentication.
 
 | Table | Purpose | Keys and constraints |
 | --- | --- | --- |
 | `users` | Platform logins; one user may belong to many teams. | `id` PK; `email` unique; `name`; `created_at`. |
+| `auth_identities` | A login identity linked to a user (currently `password`). | `id` PK; `user_id` FK cascade; `provider`; `provider_subject`; `email`; `created_at`; `UNIQUE(provider, provider_subject)`. |
+| `password_credentials` | The bcrypt hash for a password identity. | `user_id` PK/FK cascade; `password_hash`; `updated_at`. |
+| `sessions` | Cookie-backed session tokens, stored hashed. | `token_hash` PK; `user_id` FK cascade; `expires_at` (epoch seconds); `created_at`. |
 | `teams` | The top-level tracked team. | `id` PK; `slug` globally unique; `name`; `created_at`. |
 | `team_memberships` | User ↔ team join carrying `owner`/`member`. | `id` PK; `user_id` FK; `team_id` FK; `role`; `created_at`. |
 | `seasons` | Required grouping between a team and its events (ADR-0007). | `id` PK; `team_id` FK; `name`; `slug` unique within team; `start_date`; `end_date`; `created_at`. |
 | `events` | Tournament, league night, or scrimmage. | `id` PK; `season_id` FK required; `name`; `slug` unique within season; `start_date`; `end_date`; `location`. |
-| `matches` | One game against a faceless opponent. | `id` PK; `event_id` FK required; `our_team_id` FK; `opponent_name` text only (ADR-0003); `slug` unique within event; `scheduled_at`; `point_cap`; `deleted`; `created_at`. |
-| `players` | Person scoped to a team; `names` is JSON with the display name first. | `id` PK; `team_id` FK; `names` JSON; `slug` unique within team; `deleted`; `created_at`. |
+| `matches` | One game against a faceless opponent. | `id` PK; `event_id` FK required; `our_team_id` FK; `opponent_name` text only (ADR-0003); `slug` unique within event; `scheduled_at`; `point_cap`; `created_at`. |
+| `players` | Person scoped to a team; `names` is JSON with the display name first. | `id` PK; `team_id` FK; `names` JSON; `slug` unique within team; `created_at`. |
 | `season_roster_entries` | A player's registration for a season. | `id` PK; `season_id` FK; `player_id` FK; `created_at`; `UNIQUE(season_id, player_id)`; hard-deleted. |
 | `event_roster_entries` | A player's registration for an event. | `id` PK; `event_id` FK; `player_id` FK; `created_at`; `UNIQUE(event_id, player_id)`; hard-deleted. |
 | `match_events` | Append-only source of truth for gameplay. | `id` PK (idempotent by id); `match_id` FK; `point_number`; `effective_ts`; `type`; `payload` JSON; `deleted`; `created_at`. |
@@ -242,6 +246,10 @@ Additional schema rules:
   table above. Clients consume slugs; they never predict them.
 - **Seasons are required** (ADR-0007). `seasons.team_id` is required, `events.season_id` is required,
   and `matches.event_id` is required.
+- **Hard deletes with cascades.** Entities are removed by hard delete with FK `ON DELETE
+  CASCADE`; there are no storage tombstones. (`match_events.deleted` is the event-log tombstone
+  of the parity contract, not delete semantics.) Deleting a player removes the player and its
+  roster rows but never the gameplay log, so their historical stats stay derivable.
 
 ## Spec-gap defaults
 
@@ -318,8 +326,6 @@ This milestone deliberately excludes:
 
 - The WebSocket `MatchActor` and live synchronization.
 - The full UI.
-- SQLite persistence — no DDL or persistence layer is committed in this milestone.
-- Auth and permissions.
 - Match-level point lifecycle: time cap, forfeit, and related match-end rules.
 
 ## References
@@ -330,6 +336,6 @@ This milestone deliberately excludes:
   [0004](adr/0004-stats-derived-not-materialized.md), [0005](adr/0005-event-scoped-roster.md),
   [0006](adr/0006-stable-scoped-slugs.md), [0007](adr/0007-seasons-grouping-level.md).
 - `fixtures/README.md` — normative fixture format, equality rules, and spec-gap defaults.
-- `docs/er-diagram.mmd` — the planned SQLite entity-relationship diagram.
+- `docs/er-diagram.mmd` — the SQLite entity-relationship diagram.
 - `docs/reference/usau-rules-2026-27.md` — grep-able 2026–27 USAU rules; the official PDF sits
   alongside it.

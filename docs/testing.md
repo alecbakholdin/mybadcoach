@@ -61,6 +61,24 @@ analyzers. Enabled linters, with `issues.exclude-use-default: false` and no
 
 `gofmt`/`gofumpt` formatting is enforced in the same gate: unformatted code fails lint.
 
+### Protobuf — buf (strict)
+
+`.proto` files are the API contract (Connect RPC). `buf lint` runs at the strict level in the same
+gate as the other linters, and `buf breaking` guards against incompatible contract changes.
+
+### Generated code (buf + sqlc)
+
+Generated code is committed, not gitignored: `server/internal/gen` and
+`packages/shared/src/gen` (buf), plus `db.go`/`models.go`/`*.sql.go` in `server/internal/db`
+(sqlc). `.proto` and the migrations/queries are the source of record; the generated files are
+checked in so a fresh checkout builds and tests without the codegen toolchain.
+
+`npm run generate` regenerates all of it. A pre-commit hook (`.githooks/pre-commit`, enabled via
+`git config core.hooksPath .githooks`, which `scripts/install-tools.sh` applies) regenerates and
+re-stages the outputs whenever a codegen input is staged, so a commit cannot drift from its
+inputs. Committing proto/schema changes without the toolchain installed fails the hook with
+`missing required tool: buf`.
+
 ### Lint gates
 
 - `npm run lint` (both languages) must pass before merge; CI runs it on every push.
@@ -73,7 +91,8 @@ analyzers. Enabled linters, with `issues.exclude-use-default: false` and no
 - **Shared (TypeScript):** Vitest, colocated with the module (`packages/shared/src/*.test.ts`).
   Pure functions only: the reducer, aggregation, slug logic.
 - **Server (Go):** stdlib `testing`, table-driven where behavior varies over inputs. The
-  existing `internal/reduce` and `internal/slugify` suites are the pattern.
+  existing `internal/reduce` and `internal/slugify` suites are the pattern. Tests take their
+  contexts from `t.Context()`, never `context.Background()`.
 - **Client (Svelte):** Vitest for extracted logic (stores, derived state). Component rendering
   behavior is covered at the e2e seam; do not build a parallel component-testing harness unless
   a seam proves too slow for a case.
@@ -170,7 +189,7 @@ test runners, Playwright browsers).
 Merge is blocked on:
 
 1. Dependency vetting — no new dependency without explicit human approval (above).
-2. `npm run lint` — ESLint and golangci-lint, both strict, zero warnings.
+2. `npm run lint` — ESLint, golangci-lint, and buf lint, all strict, zero warnings.
 3. `npm run test` — unit suites in both languages plus the parity suite.
 4. The three integration seams, including snapshots — with any snapshot change explicitly
    validated by a human.

@@ -1,0 +1,12 @@
+{
+	"name": "mybadcoach",
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
+	"remoteUser": "node",
+	"mounts": [
+		"source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+	],
+	"postCreateCommand": "npm ci && bash scripts/install-tools.sh",
+	"postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}"
+}

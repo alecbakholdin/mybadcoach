@@ -1,0 +1,87 @@
+# Strict Go lint gate for the server module, per docs/testing.md.
+#
+# Run through `npm run lint` (scripts/lint.sh) from the repo root; golangci-lint
+# resolves this file from server/ by walking up to the repo root. This is the
+# golangci-lint v2 schema (v2.15.0, approved as the upgrade from the v1.64.8
+# binary that was built with Go 1.25 and could not lint the Go 1.27 module).
+version: "2"
+
+run:
+  timeout: 5m
+
+linters:
+  # Every linter is opt-in; no default set, so nothing runs that isn't listed.
+  default: none
+  enable:
+    - errcheck
+    - exhaustive
+    - gocritic
+    - gosec
+    - govet
+    - ineffassign
+    - misspell
+    - nilerr
+    - revive
+    - staticcheck
+    - unused
+
+  settings:
+    govet:
+      enable-all: true
+    staticcheck:
+      # staticcheck in v2 folds in the former gosimple + stylecheck linters;
+      # "all" enables SA*, S*, ST* and QF*.
+      checks: ["all"]
+    revive:
+      # The strict revive ruleset from docs/testing.md (golint successor).
+      rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: early-return
+        - name: empty-block
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+        - name: increment-decrement
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: var-declaration
+        - name: var-naming
+    gocritic:
+      # The high bar from docs/testing.md: all stable check groups.
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+    exhaustive:
+      # A switch with a default case counts as exhaustive; the reducer's enum
+      # switch tables rely on this being strict everywhere else.
+      default-signifies-exhaustive: true
+
+  exclusions:
+    # buf-generated .pb.go / .connect.go carry the standard "Code generated"
+    # marker and are not hand-edited, so they are not linted (they are still
+    # compiled and typechecked by `go build` / `go test`). No other exclusions:
+    # this mirrors v1's `exclude-use-default: false`.
+    generated: lax
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+  exclusions:
+    generated: lax

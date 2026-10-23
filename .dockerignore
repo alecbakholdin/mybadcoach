@@ -1,0 +1,17 @@
+# The client build context is the repo root; only the npm workspaces and the
+# client source are relevant.
+.git
+.github
+.devcontainer
+.scratch
+.tools
+dist
+node_modules
+**/node_modules
+**/.svelte-kit
+**/.vite
+**/*.tsbuildinfo
+server
+e2e
+fixtures
+docs

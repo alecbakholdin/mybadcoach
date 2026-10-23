@@ -1,12 +1,36 @@
-import type { PlayerStats, PointDerivedState } from './state';
-import { emptyPlayerStats } from './state';
+import type { PointDerivedState } from './gen/mybadcoach/matches/v1/matches_pb';
+
+/** The seven base stats, as plain numbers (the aggregation output shape). */
+interface BaseStatNumbers {
+  touches: number;
+  completions: number;
+  drops: number;
+  turnovers: number;
+  blocks: number;
+  goals: number;
+  assists: number;
+}
+
+/**
+ * A base-stat source: reducer output carries bigints (generated int64 fields),
+ * while already-aggregated lines carry plain numbers.
+ */
+interface BaseStatSource {
+  touches: number | bigint;
+  completions: number | bigint;
+  drops: number | bigint;
+  turnovers: number | bigint;
+  blocks: number | bigint;
+  goals: number | bigint;
+  assists: number | bigint;
+}
 
 /**
  * A player's complete stat line: the seven base stats credited by the reducer
  * plus the three stats derived from them (ADR-0002). Derived fields are
  * computed on every aggregation and never stored (ADR-0004).
  */
-export interface PlayerStatLine extends PlayerStats {
+export interface PlayerStatLine extends BaseStatNumbers {
   receptions: number;
   throwAttempts: number;
   plusMinus: number;
@@ -25,13 +49,13 @@ export type PlayerStatLines = Record<string, PlayerStatLine>;
 export function aggregateMatchStats(
   points: readonly PointDerivedState[],
 ): PlayerStatLines {
-  const totals: Record<string, PlayerStats> = {};
+  const totals: Record<string, BaseStatNumbers> = {};
 
   for (const point of points) {
     for (const [playerId, stats] of Object.entries(point.playerStats)) {
       // Start every player from a complete zero-filled line: a player credited
       // in one point but absent from another contributes zeros for that point.
-      const total = totals[playerId] ?? emptyPlayerStats();
+      const total = totals[playerId] ?? emptyBaseStats();
       accumulateBaseStats(total, stats);
       totals[playerId] = total;
     }
@@ -68,11 +92,11 @@ export function aggregateCareerStats(
 
 /** Sum per-match stat lines, recomputing all derived stats from base totals. */
 function sumStatLines(matches: readonly PlayerStatLines[]): PlayerStatLines {
-  const totals: Record<string, PlayerStats> = {};
+  const totals: Record<string, BaseStatNumbers> = {};
 
   for (const match of matches) {
     for (const [playerId, line] of Object.entries(match)) {
-      const total = totals[playerId] ?? emptyPlayerStats();
+      const total = totals[playerId] ?? emptyBaseStats();
       // Only the seven base stats are summed. Any derived fields carried by
       // the input are ignored and recomputed by `toStatLines`, so a rollup
       // can never materialize a stale derived value (ADR-0004).
@@ -84,19 +108,34 @@ function sumStatLines(matches: readonly PlayerStatLines[]): PlayerStatLines {
   return toStatLines(totals);
 }
 
+/** A zero-filled set of the seven base stats, in plain-number form. */
+function emptyBaseStats(): BaseStatNumbers {
+  return {
+    touches: 0,
+    completions: 0,
+    drops: 0,
+    turnovers: 0,
+    blocks: 0,
+    goals: 0,
+    assists: 0,
+  };
+}
+
 /** Add one player's base stats into a running total, in place. */
-function accumulateBaseStats(target: PlayerStats, source: PlayerStats): void {
-  target.touches += source.touches;
-  target.completions += source.completions;
-  target.drops += source.drops;
-  target.turnovers += source.turnovers;
-  target.blocks += source.blocks;
-  target.goals += source.goals;
-  target.assists += source.assists;
+function accumulateBaseStats(target: BaseStatNumbers, source: BaseStatSource): void {
+  // The generated int64 fields are bigints; aggregation output stays in the
+  // plain-number form used by the fixtures and the TS API surface.
+  target.touches += Number(source.touches);
+  target.completions += Number(source.completions);
+  target.drops += Number(source.drops);
+  target.turnovers += Number(source.turnovers);
+  target.blocks += Number(source.blocks);
+  target.goals += Number(source.goals);
+  target.assists += Number(source.assists);
 }
 
 /** Turn base totals into complete stat lines, deriving the three extra stats. */
-function toStatLines(totals: Record<string, PlayerStats>): PlayerStatLines {
+function toStatLines(totals: Record<string, BaseStatNumbers>): PlayerStatLines {
   const lines: PlayerStatLines = {};
   for (const [playerId, base] of Object.entries(totals)) {
     lines[playerId] = deriveStatLine(base);
@@ -105,7 +144,7 @@ function toStatLines(totals: Record<string, PlayerStats>): PlayerStatLines {
 }
 
 /** Compute the three derived stats from a base-stat total (ADR-0002). */
-function deriveStatLine(base: PlayerStats): PlayerStatLine {
+function deriveStatLine(base: BaseStatNumbers): PlayerStatLine {
   return {
     ...base,
     // receptions = touches. GLOSSARY defines Touch as "a player catching or

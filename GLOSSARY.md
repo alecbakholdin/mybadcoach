@@ -11,8 +11,14 @@ The top-level entity: the team whose matches and stats we track.
 _Avoid_: Club, squad, org
 
 **User**:
-An app login in the (future) multi-team platform. A user may belong to many teams.
+A person's app-level account in the (future) multi-team platform. A user may authenticate with
+several LoginMethods and may belong to many teams.
 _Avoid_: Account
+
+**LoginMethod**:
+A way a User authenticates: a password credential or a social provider (Google, Apple). A User may
+have several; each belongs to exactly one User.
+_Avoid_: Identity, credential
 
 **TeamMembership**:
 The join between a User and a Team, carrying a role (`owner` or `member`).

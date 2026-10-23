@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "integration/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+# Every job is independent: no `needs` chains, so each check runs in parallel
+# and shows up as its own status on the PR. Frontend (TypeScript) and backend
+# (Go) are split, and lint is split into Go vs protobuf.
+
+jobs:
+  lint-go:
+    name: Lint (Go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.3"
+          cache-dependency-path: server/go.sum
+      - run: bash scripts/install-tools.sh golangci-lint
+      - run: bash scripts/lint.sh go
+
+  lint-buf:
+    name: Lint (protobuf)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.3"
+          cache-dependency-path: server/go.sum
+      - run: bash scripts/install-tools.sh buf
+      - run: bash scripts/lint.sh buf
+
+  test-shared:
+    name: Test (TypeScript)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.22"
+          cache: npm
+      - run: npm ci
+      - run: npm run test:shared
+
+  test-go:
+    name: Test (Go)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.3"
+          cache-dependency-path: server/go.sum
+      - run: go test ./...
+        working-directory: server
+
+  build-client:
+    name: Build (client)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.22"
+          cache: npm
+      - run: npm ci
+      - run: npm run build:client
+
+  build-server:
+    name: Build (server)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.27.3"
+          cache-dependency-path: server/go.sum
+      - run: go build ./cmd/server
+        working-directory: server
+
+  e2e:
+    name: Full-stack e2e (docker compose)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # The compose definition is the authority: CI runs the same command a
+      # developer runs locally and in the devcontainer.
+      - run: docker compose build
+      - run: docker compose run --rm e2e
+      - name: Compose logs
+        if: failure()
+        run: docker compose logs
+      - name: Tear down
+        if: always()
+        run: docker compose down --volumes --remove-orphans

@@ -1,0 +1,13 @@
+# sqlc codegen. Ticket 02 adds the migrations (schema) this reads; ticket 04
+# adds the queries directory. Until then `npm run generate` detects the absence
+# of query files and skips sqlc.
+version: "2"
+sql:
+  - engine: "sqlite"
+    schema: "internal/db/migrations"
+    queries: "internal/db/queries"
+    gen:
+      go:
+        package: "db"
+        out: "internal/db"
+        sql_package: "database/sql"
