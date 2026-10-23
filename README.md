@@ -6,8 +6,8 @@ TypeScript client and the Go server turns the log into live statistics.
 
 ## Prerequisites
 
-- **Node.js 20 or newer** — required by the root `engines.node` field (`>=20`). It runs the shared
-  TypeScript package, the SvelteKit client, and the workspace scripts.
+- **Node.js 22.17 or newer** — required by the root `engines.node` field (`>=22.17`). It runs the
+  shared TypeScript package, the SvelteKit client, and the workspace scripts.
 - **Go 1.22 or newer** — required by `server/go.mod`. It runs the Go server and its half of the
   parity suite.
 
@@ -27,14 +27,16 @@ fixtures.
 
 ## Commands
 
-| Command                | Description                                                                                   |
-| ---------------------- | --------------------------------------------------------------------------------------------- |
-| `npm test`             | Run both test suites: `test:shared` then `test:server`.                                       |
-| `npm run test:shared`  | Typecheck and run the shared TypeScript suite (Vitest), including all 24 parity fixtures.      |
-| `npm run test:server`  | Run the Go server suite (`go test ./...`), including the same 24 parity fixtures.              |
-| `npm run build:server` | Build the Go server binary to `dist/server`.                                                   |
-| `npm run dev:client`   | Start the SvelteKit client dev server.                                                         |
-| `npm run build:client` | Build the SvelteKit client for production.                                                     |
+| Command                 | Description                                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------------------- |
+| `npm test`              | Run both test suites: `test:shared` then `test:server`.                                       |
+| `npm run test:shared`   | Typecheck and run the shared TypeScript suite (Vitest), including all 24 parity fixtures.      |
+| `npm run test:server`   | Run the Go server suite (`go test ./...`), including the same 24 parity fixtures.              |
+| `npm run build:server`  | Build the Go server binary to `dist/server`.                                                   |
+| `npm run dev:client`    | Start the SvelteKit client dev server.                                                         |
+| `npm run build:client`  | Build the SvelteKit client for production.                                                     |
+| `npm run verify:rules`  | Verify the checked-in USAU rules Markdown conversion (`scripts/verify-usau-rules-md.sh`).      |
+| `npm run verify:client` | Verify the client skeleton: shared tests, production build, and dev-server SSR.               |
 
 ## Documentation
 

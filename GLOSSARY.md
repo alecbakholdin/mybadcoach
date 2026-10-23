@@ -120,6 +120,14 @@ A derived stat: touches + completions − goals − turnovers. Computed, never s
 A derived individual stat: goals + assists + blocks − turnovers − drops. Computed, never stored.
 _Avoid_: On-field plus/minus
 
+**TeamRecord**:
+A team's wins, losses, and ties across a set of matches.
+_Avoid_: Standings
+
+**MatchScore**:
+The final score of a completed match: our score and the opponent's score.
+_Avoid_: Result, final
+
 ## Reference
 
 - [2026–27 USAU Rules of Ultimate, Markdown](docs/reference/usau-rules-2026-27.md) — grep-able

@@ -132,7 +132,7 @@ The suite is fixed at 24 fixtures; both runners assert that exact count.
 | `03-duplicate-id-dedupe.json`           | Duplicate ids reduce once (one TOUCH, not two).                             |
 | `04-set-lineup-full-seven.json`         | A full seven-player lineup is accepted in field order.                      |
 | `05-set-lineup-replaces-lineup.json`    | A later SET_LINEUP replaces the lineup wholesale.                           |
-| `06-touch-credits-completion.json`      | A catch credits the previous thrower with a completion.                     |
+| `06-touch-credits-completion.json`      | A touch credits the previous thrower with a completion.                     |
 | `07-pull.json`                          | PULL advances to `DEFENSE_ACTIVE`, credits no stat, clears thrower.         |
 | `08-pull-then-touch.json`               | Receiving the pull is a touch, never a completion.                          |
 | `09-drop.json`                          | DROP credits the receiver, clears thrower, flips to defense.                |
@@ -149,7 +149,7 @@ The suite is fixed at 24 fixtures; both runners assert that exact count.
 | `20-deleted-events-ignored.json`        | Deleted tombstone events never affect derived state.                        |
 | `21-out-of-order-full-sequence.json`    | A whole lineup/touch/touch/score log reduces in `effectiveTs` order.        |
 | `22-duplicate-score-idempotent.json`    | A replayed SCORE id counts once, keeping the first after sorting.           |
-| `23-turnover-recovery-cycle.json`       | Turnovers clear the thrower, so the next catch is not a completion.         |
+| `23-turnover-recovery-cycle.json`       | Turnovers clear the thrower, so the next touch is not a completion.         |
 | `24-touch-same-player-no-self-completion.json` | A repeated TOUCH by one player never credits a self-completion.      |
 
 ## Spec-gap defaults
@@ -194,7 +194,7 @@ Shared conventions:
    the goal/assist. **Callahan guard:** `assistPlayerId: ""` means a defensive score (GLOSSARY:
    Callahan). The reducer must not fall back to the current `thrower` for an assist or completion,
    and must not charge a turnover to any player; a SCORE event changes no `turnovers` value
-   (USAU 13: a goal is a catch in the end zone, not a throw).
+   (USAU 13: a goal is scored by catching the disc in the end zone, not by throwing it).
 6. **SUB_PLAYER** — Credits no stats. Replaces the first occurrence of `playerOutId` in `lineup`
    with `playerInId`, preserving field order and lineup size, including a full seven-player
    lineup (USAU 9.C: at most seven players on the field). If `playerOutId` is the current
@@ -214,7 +214,7 @@ These extend the two event types that already had tracer fixtures; they are pinn
 suite as well.
 
 - **TOUCH** — Credits `touches + 1` to the receiver. If a different player was the current
-  `thrower`, that thrower also gets `completions + 1`: the catch is the only evidence of a
+  `thrower`, that thrower also gets `completions + 1`: the touch is the only evidence of a
   completed pass, since there is no PASS event (USAU 3.N.5: a throw is complete when the team
   retains possession). A same-player TOUCH never credits a self-completion. Sets `thrower` to the
   receiver and `view` to `OFFENSE_POSSESSION`.

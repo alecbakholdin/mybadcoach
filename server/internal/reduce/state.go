@@ -43,8 +43,8 @@ type PointDerivedState struct {
 	PlayerStats map[string]PlayerStats `json:"playerStats"`
 }
 
-// EmptyPlayerStats returns a zero-filled PlayerStats value.
-func EmptyPlayerStats() PlayerStats {
+// emptyPlayerStats returns a zero-filled PlayerStats value.
+func emptyPlayerStats() PlayerStats {
 	return PlayerStats{}
 }
 

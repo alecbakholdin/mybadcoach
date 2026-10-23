@@ -8,7 +8,7 @@
     "apps/*"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=22.17"
   },
   "scripts": {
     "test": "npm run test:shared && npm run test:server",
@@ -16,6 +16,8 @@
     "test:server": "cd server && go test ./...",
     "build:server": "cd server && go build -o ../dist/server ./cmd/server",
     "dev:client": "npm run dev -w apps/client",
-    "build:client": "npm run build -w apps/client"
+    "build:client": "npm run build -w apps/client",
+    "verify:rules": "bash scripts/verify-usau-rules-md.sh",
+    "verify:client": "bash scripts/verify-client-skeleton.sh"
   }
 }
