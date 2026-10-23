@@ -217,8 +217,8 @@ log; the other tables are pre-game structure.
 | `team_memberships` | User ↔ team join carrying `owner`/`member`. | `id` PK; `user_id` FK; `team_id` FK; `role`; `created_at`. |
 | `seasons` | Required grouping between a team and its events (ADR-0007). | `id` PK; `team_id` FK; `name`; `slug` unique within team; `start_date`; `end_date`; `created_at`. |
 | `events` | Tournament, league night, or scrimmage. | `id` PK; `season_id` FK required; `name`; `slug` unique within season; `start_date`; `end_date`; `location`. |
-| `matches` | One game against a faceless opponent. | `id` PK; `event_id` FK required; `our_team_id` FK; `opponent_name` text only (ADR-0003); `slug` unique within event; `scheduled_at`; `point_cap`; `deleted`; `created_at`. |
-| `players` | Person scoped to a team; `names` is JSON with the display name first. | `id` PK; `team_id` FK; `names` JSON; `slug` unique within team; `deleted`; `created_at`. |
+| `matches` | One game against a faceless opponent. | `id` PK; `event_id` FK required; `our_team_id` FK; `opponent_name` text only (ADR-0003); `slug` unique within event; `scheduled_at`; `point_cap`; `created_at`. |
+| `players` | Person scoped to a team; `names` is JSON with the display name first. | `id` PK; `team_id` FK; `names` JSON; `slug` unique within team; `created_at`. |
 | `season_roster_entries` | A player's registration for a season. | `id` PK; `season_id` FK; `player_id` FK; `created_at`; `UNIQUE(season_id, player_id)`; hard-deleted. |
 | `event_roster_entries` | A player's registration for an event. | `id` PK; `event_id` FK; `player_id` FK; `created_at`; `UNIQUE(event_id, player_id)`; hard-deleted. |
 | `match_events` | Append-only source of truth for gameplay. | `id` PK (idempotent by id); `match_id` FK; `point_number`; `effective_ts`; `type`; `payload` JSON; `deleted`; `created_at`. |
@@ -242,6 +242,10 @@ Additional schema rules:
   table above. Clients consume slugs; they never predict them.
 - **Seasons are required** (ADR-0007). `seasons.team_id` is required, `events.season_id` is required,
   and `matches.event_id` is required.
+- **Hard deletes with cascades.** Entities are removed by hard delete with FK `ON DELETE
+  CASCADE`; there are no storage tombstones. (`match_events.deleted` is the event-log tombstone
+  of the parity contract, not delete semantics.) Deleting a player removes the player and its
+  roster rows but never the gameplay log, so their historical stats stay derivable.
 
 ## Spec-gap defaults
 

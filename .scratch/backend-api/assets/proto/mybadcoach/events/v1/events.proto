@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package mybadcoach.events.v1;
+
+import "mybadcoach/players/v1/players.proto";
+
+// EventService (ticket 05): events + event rosters. DeleteEvent is member-gated
+// (hard delete, cascades to matches/gameplay). Roster entries are hard-deleted
+// (ADR-0005).
+service EventService {
+  rpc CreateEvent(CreateEventRequest) returns (CreateEventResponse);
+  rpc GetEvent(GetEventRequest) returns (GetEventResponse);
+  rpc UpdateEvent(UpdateEventRequest) returns (UpdateEventResponse);
+  rpc ListEvents(ListEventsRequest) returns (ListEventsResponse);
+  rpc DeleteEvent(DeleteEventRequest) returns (DeleteEventResponse);
+  rpc AddEventRosterEntry(AddEventRosterEntryRequest) returns (AddEventRosterEntryResponse);
+  rpc RemoveEventRosterEntry(RemoveEventRosterEntryRequest) returns (RemoveEventRosterEntryResponse);
+  rpc ListEventRoster(ListEventRosterRequest) returns (ListEventRosterResponse);
+}
+
+message Event {
+  string id = 1;
+  string slug = 2;
+  string name = 3;
+  string start_date = 4; // ISO-8601 date
+  string end_date = 5; // ISO-8601 date
+  string location = 6;
+}
+
+message CreateEventRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string name = 3;
+  optional string start_date = 4;
+  optional string end_date = 5;
+  optional string location = 6;
+}
+
+message CreateEventResponse {
+  Event event = 1;
+}
+
+message GetEventRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+}
+
+message GetEventResponse {
+  Event event = 1;
+}
+
+message UpdateEventRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  optional string name = 4;
+  optional string start_date = 5;
+  optional string end_date = 6;
+  optional string location = 7;
+}
+
+message UpdateEventResponse {
+  Event event = 1;
+}
+
+message ListEventsRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  int32 offset = 3;
+  int32 limit = 4;
+}
+
+message ListEventsResponse {
+  repeated Event events = 1;
+  int64 total = 2;
+}
+
+message DeleteEventRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+}
+
+message DeleteEventResponse {}
+
+message AddEventRosterEntryRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  string player_slug = 4;
+}
+
+message AddEventRosterEntryResponse {
+  mybadcoach.players.v1.Player player = 1;
+}
+
+message RemoveEventRosterEntryRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  string player_slug = 4;
+}
+
+message RemoveEventRosterEntryResponse {}
+
+message ListEventRosterRequest {
+  string team_slug = 1;
+  string season_slug = 2;
+  string event_slug = 3;
+  int32 offset = 4;
+  int32 limit = 5;
+}
+
+message ListEventRosterResponse {
+  repeated mybadcoach.players.v1.Player players = 1;
+  int64 total = 2;
+}

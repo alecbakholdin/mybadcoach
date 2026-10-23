@@ -1,0 +1,114 @@
+syntax = "proto3";
+
+package mybadcoach.teams.v1;
+
+import "mybadcoach/auth/v1/auth.proto";
+
+// TeamService (ticket 05): teams + memberships + team record. Addressing is by slug;
+// ids never appear in requests. Membership management and DeleteTeam are owner-only.
+// There is no ListTeams: ListMyTeams is the only team listing (no global directory).
+service TeamService {
+  rpc CreateTeam(CreateTeamRequest) returns (CreateTeamResponse);
+  rpc GetTeam(GetTeamRequest) returns (GetTeamResponse);
+  rpc UpdateTeam(UpdateTeamRequest) returns (UpdateTeamResponse);
+  rpc DeleteTeam(DeleteTeamRequest) returns (DeleteTeamResponse); // owner-only
+  rpc ListMyTeams(ListMyTeamsRequest) returns (ListMyTeamsResponse);
+  rpc AddMembership(AddMembershipRequest) returns (AddMembershipResponse); // owner-only
+  rpc UpdateMembership(UpdateMembershipRequest) returns (UpdateMembershipResponse); // owner-only
+  rpc RemoveMembership(RemoveMembershipRequest) returns (RemoveMembershipResponse); // owner-only
+  rpc GetTeamRecord(GetTeamRecordRequest) returns (GetTeamRecordResponse);
+}
+
+message Team {
+  string id = 1;
+  string slug = 2;
+  string name = 3;
+}
+
+message TeamMembership {
+  Team team = 1;
+  string role = 2; // "owner" | "member"
+}
+
+message Membership {
+  mybadcoach.auth.v1.User user = 1;
+  string role = 2; // "owner" | "member"
+}
+
+message TeamRecord {
+  int64 wins = 1;
+  int64 losses = 2;
+  int64 ties = 3;
+}
+
+message CreateTeamRequest {
+  string name = 1;
+}
+
+message CreateTeamResponse {
+  Team team = 1; // caller becomes owner
+}
+
+message GetTeamRequest {
+  string team_slug = 1;
+}
+
+message GetTeamResponse {
+  Team team = 1;
+}
+
+message UpdateTeamRequest {
+  string team_slug = 1;
+  optional string name = 2;
+}
+
+message UpdateTeamResponse {
+  Team team = 1;
+}
+
+message DeleteTeamRequest {
+  string team_slug = 1; // hard delete, cascades
+}
+
+message DeleteTeamResponse {}
+
+message ListMyTeamsRequest {}
+
+message ListMyTeamsResponse {
+  repeated TeamMembership memberships = 1;
+}
+
+message AddMembershipRequest {
+  string team_slug = 1;
+  string email = 2; // existing user; user_not_found otherwise (invites backlogged)
+}
+
+message AddMembershipResponse {
+  Membership membership = 1;
+}
+
+message UpdateMembershipRequest {
+  string team_slug = 1;
+  string user_id = 2;
+  string role = 3; // last-owner guard: last_owner
+}
+
+message UpdateMembershipResponse {
+  Membership membership = 1;
+}
+
+message RemoveMembershipRequest {
+  string team_slug = 1;
+  string user_id = 2; // last-owner guard: last_owner
+}
+
+message RemoveMembershipResponse {}
+
+message GetTeamRecordRequest {
+  string team_slug = 1;
+  optional string season_slug = 2; // scoped when present
+}
+
+message GetTeamRecordResponse {
+  TeamRecord record = 1;
+}

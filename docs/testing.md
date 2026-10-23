@@ -61,6 +61,11 @@ analyzers. Enabled linters, with `issues.exclude-use-default: false` and no
 
 `gofmt`/`gofumpt` formatting is enforced in the same gate: unformatted code fails lint.
 
+### Protobuf — buf (strict)
+
+`.proto` files are the API contract (Connect RPC). `buf lint` runs at the strict level in the same
+gate as the other linters, and `buf breaking` guards against incompatible contract changes.
+
 ### Lint gates
 
 - `npm run lint` (both languages) must pass before merge; CI runs it on every push.
@@ -170,7 +175,7 @@ test runners, Playwright browsers).
 Merge is blocked on:
 
 1. Dependency vetting — no new dependency without explicit human approval (above).
-2. `npm run lint` — ESLint and golangci-lint, both strict, zero warnings.
+2. `npm run lint` — ESLint, golangci-lint, and buf lint, all strict, zero warnings.
 3. `npm run test` — unit suites in both languages plus the parity suite.
 4. The three integration seams, including snapshots — with any snapshot change explicitly
    validated by a human.

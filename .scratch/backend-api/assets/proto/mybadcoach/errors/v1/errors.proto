@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package mybadcoach.errors.v1;
+
+// Machine-readable error detail attached to every Connect error
+// (connect.WithErrorDetails). `code` is the stable machine code documented per RPC
+// ("email_taken", "invalid_credentials", "session_expired", "last_owner", "id_conflict",
+// "user_not_found", ...).
+message ErrorDetail {
+  string code = 1;
+  repeated FieldViolation field_violations = 2;
+}
+
+message FieldViolation {
+  string field = 1;
+  string description = 2;
+}
