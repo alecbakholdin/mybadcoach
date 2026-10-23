@@ -13,6 +13,7 @@ import (
 	"github.com/alecbakholdin/mybadcoach/server/internal/gameplay"
 	teamsv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/teams/v1"
 	"github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/teams/v1/teamsv1connect"
+	idgen "github.com/alecbakholdin/mybadcoach/server/internal/id"
 	"github.com/alecbakholdin/mybadcoach/server/internal/slugify"
 )
 
@@ -43,7 +44,7 @@ func (s *TeamService) CreateTeam(
 	if validationErr != nil {
 		return nil, validationErr
 	}
-	id, err := newID()
+	id, err := idgen.New()
 	if err != nil {
 		return nil, internalError()
 	}
@@ -75,7 +76,7 @@ func (s *TeamService) CreateTeam(
 	if err != nil {
 		return nil, internalError()
 	}
-	membershipID, err := newID()
+	membershipID, err := idgen.New()
 	if err != nil {
 		return nil, internalError()
 	}
@@ -214,7 +215,7 @@ func (s *TeamService) AddMembership(
 		return nil, internalError()
 	}
 
-	membershipID, err := newID()
+	membershipID, err := idgen.New()
 	if err != nil {
 		return nil, internalError()
 	}
@@ -247,7 +248,18 @@ func (s *TeamService) UpdateMembership(
 		return nil, invalidArgument(fieldViolation("role", `must be "owner" or "member"`))
 	}
 	userID := req.Msg.GetUserId()
-	membership, err := s.queries.GetMembership(ctx, db.GetMembershipParams{
+
+	// The last-owner check and the mutation must share one transaction:
+	// otherwise two concurrent demotions can each see two owners and commit,
+	// leaving the team with none.
+	tx, err := s.sqlDB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, internalError()
+	}
+	defer func() { _ = tx.Rollback() }()
+	queries := s.queries.WithTx(tx)
+
+	membership, err := queries.GetMembership(ctx, db.GetMembershipParams{
 		TeamID: team.ID,
 		UserID: userID,
 	})
@@ -258,7 +270,7 @@ func (s *TeamService) UpdateMembership(
 		return nil, internalError()
 	}
 	if membership.Role == roleOwner && role == roleMember {
-		owners, countErr := s.queries.CountOwners(ctx, team.ID)
+		owners, countErr := queries.CountOwners(ctx, team.ID)
 		if countErr != nil {
 			return nil, internalError()
 		}
@@ -266,18 +278,21 @@ func (s *TeamService) UpdateMembership(
 			return nil, lastOwnerError()
 		}
 	}
-	if updateErr := s.queries.UpdateMembershipRole(ctx, db.UpdateMembershipRoleParams{
+	if updateErr := queries.UpdateMembershipRole(ctx, db.UpdateMembershipRoleParams{
 		Role:   role,
 		TeamID: team.ID,
 		UserID: userID,
 	}); updateErr != nil {
 		return nil, internalError()
 	}
-	row, err := s.queries.GetMembershipWithUser(ctx, db.GetMembershipWithUserParams{
+	row, err := queries.GetMembershipWithUser(ctx, db.GetMembershipWithUserParams{
 		TeamID: team.ID,
 		UserID: userID,
 	})
 	if err != nil {
+		return nil, internalError()
+	}
+	if commitErr := tx.Commit(); commitErr != nil {
 		return nil, internalError()
 	}
 	return connect.NewResponse(&teamsv1.UpdateMembershipResponse{
@@ -296,7 +311,17 @@ func (s *TeamService) RemoveMembership(
 		return nil, err
 	}
 	userID := req.Msg.GetUserId()
-	membership, err := s.queries.GetMembership(ctx, db.GetMembershipParams{
+
+	// As with UpdateMembership, the last-owner check and the delete share one
+	// transaction so concurrent removals cannot leave the team ownerless.
+	tx, err := s.sqlDB.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, internalError()
+	}
+	defer func() { _ = tx.Rollback() }()
+	queries := s.queries.WithTx(tx)
+
+	membership, err := queries.GetMembership(ctx, db.GetMembershipParams{
 		TeamID: team.ID,
 		UserID: userID,
 	})
@@ -307,7 +332,7 @@ func (s *TeamService) RemoveMembership(
 		return nil, internalError()
 	}
 	if membership.Role == roleOwner {
-		owners, countErr := s.queries.CountOwners(ctx, team.ID)
+		owners, countErr := queries.CountOwners(ctx, team.ID)
 		if countErr != nil {
 			return nil, internalError()
 		}
@@ -315,10 +340,13 @@ func (s *TeamService) RemoveMembership(
 			return nil, lastOwnerError()
 		}
 	}
-	if deleteErr := s.queries.DeleteMembership(ctx, db.DeleteMembershipParams{
+	if deleteErr := queries.DeleteMembership(ctx, db.DeleteMembershipParams{
 		TeamID: team.ID,
 		UserID: userID,
 	}); deleteErr != nil {
+		return nil, internalError()
+	}
+	if commitErr := tx.Commit(); commitErr != nil {
 		return nil, internalError()
 	}
 	return connect.NewResponse(&teamsv1.RemoveMembershipResponse{}), nil

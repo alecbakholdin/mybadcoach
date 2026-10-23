@@ -2,15 +2,15 @@ package db
 
 import (
 	"context"
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
+
+	idgen "github.com/alecbakholdin/mybadcoach/server/internal/id"
 )
 
 const (
@@ -32,12 +32,15 @@ const (
 
 	devAdminName = "Dev Admin"
 	bcryptCost   = 12
-	seedIDBytes  = 16
 )
 
 // Seed creates the development admin account when SeedEnvVar is "1" and no
 // account with DevAdminEmail exists yet. It is idempotent: calling it on every
 // startup is safe.
+//
+// Seed checks only SeedEnvVar. Callers that can run in production must also
+// refuse to seed there (cmd/server gates on MBC_ENV), so the well-known dev
+// credentials can never be created in a production deployment.
 //
 // The seeded identity uses PasswordProvider and the account email as
 // provider_subject. The password credential holds a bcrypt hash (cost 12) of
@@ -62,11 +65,11 @@ func Seed(ctx context.Context, sqlDB *sql.DB) error {
 		return fmt.Errorf("check for seeded admin: %w", err)
 	}
 
-	userID, err := newID()
+	userID, err := idgen.New()
 	if err != nil {
 		return err
 	}
-	identityID, err := newID()
+	identityID, err := idgen.New()
 	if err != nil {
 		return err
 	}
@@ -113,13 +116,4 @@ func Seed(ctx context.Context, sqlDB *sql.DB) error {
 		return fmt.Errorf("commit seed: %w", err)
 	}
 	return nil
-}
-
-// newID returns a random 32-character hex id (16 random bytes).
-func newID() (string, error) {
-	var raw [seedIDBytes]byte
-	if _, err := rand.Read(raw[:]); err != nil {
-		return "", fmt.Errorf("generate id: %w", err)
-	}
-	return hex.EncodeToString(raw[:]), nil
 }

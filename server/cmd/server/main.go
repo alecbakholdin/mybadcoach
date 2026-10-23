@@ -41,8 +41,14 @@ func run() error {
 		}
 	}()
 
-	if seedErr := db.Seed(context.Background(), sqlDB); seedErr != nil {
-		return seedErr
+	// The development seed bootstraps a well-known admin account, so it is
+	// unsafe in production. Gate it on both MBC_DEV_SEED=1 and a non-production
+	// MBC_ENV: even if the dev flag leaks into a production environment, the
+	// production build never seeds. db.Seed itself only checks the dev flag.
+	if os.Getenv("MBC_ENV") != productionEnvValue {
+		if seedErr := db.Seed(context.Background(), sqlDB); seedErr != nil {
+			return seedErr
+		}
 	}
 
 	handler, err := api.NewHandler(api.Config{

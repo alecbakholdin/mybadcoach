@@ -10,6 +10,7 @@ import (
 	"github.com/alecbakholdin/mybadcoach/server/internal/db"
 	playersv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/players/v1"
 	"github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/players/v1/playersv1connect"
+	idgen "github.com/alecbakholdin/mybadcoach/server/internal/id"
 	"github.com/alecbakholdin/mybadcoach/server/internal/slugify"
 )
 
@@ -43,7 +44,7 @@ func (s *PlayerService) CreatePlayer(
 	if err != nil {
 		return nil, internalError()
 	}
-	id, err := newID()
+	id, err := idgen.New()
 	if err != nil {
 		return nil, internalError()
 	}

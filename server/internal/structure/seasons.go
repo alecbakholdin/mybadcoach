@@ -11,6 +11,7 @@ import (
 	playersv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/players/v1"
 	seasonsv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/seasons/v1"
 	"github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/seasons/v1/seasonsv1connect"
+	idgen "github.com/alecbakholdin/mybadcoach/server/internal/id"
 	"github.com/alecbakholdin/mybadcoach/server/internal/slugify"
 )
 
@@ -41,7 +42,7 @@ func (s *SeasonService) CreateSeason(
 	if validationErr != nil {
 		return nil, validationErr
 	}
-	id, err := newID()
+	id, err := idgen.New()
 	if err != nil {
 		return nil, internalError()
 	}
@@ -216,7 +217,7 @@ func (s *SeasonService) AddSeasonRosterEntry(
 	if err != nil {
 		return nil, err
 	}
-	entryID, err := newID()
+	entryID, err := idgen.New()
 	if err != nil {
 		return nil, internalError()
 	}
@@ -337,7 +338,7 @@ func (s *SeasonService) CopySeasonRoster(
 	defer func() { _ = tx.Rollback() }()
 	queries := s.queries.WithTx(tx)
 	for i := range players {
-		entryID, idErr := newID()
+		entryID, idErr := idgen.New()
 		if idErr != nil {
 			return nil, internalError()
 		}

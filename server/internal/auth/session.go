@@ -23,7 +23,6 @@ const (
 	SessionLifetime = 30 * 24 * time.Hour
 
 	tokenBytes = 32
-	idBytes    = 16
 )
 
 // sessionToken is a freshly minted session token: the raw value travels in the
@@ -53,16 +52,6 @@ func newSessionToken(now time.Time) (sessionToken, error) {
 func hashToken(raw string) string {
 	sum := sha256.Sum256([]byte(raw))
 	return hex.EncodeToString(sum[:])
-}
-
-// newID returns a random 32-character hex id (16 random bytes), matching the
-// ids minted by the database seed.
-func newID() (string, error) {
-	raw := make([]byte, idBytes)
-	if _, err := rand.Read(raw); err != nil {
-		return "", fmt.Errorf("generate id: %w", err)
-	}
-	return hex.EncodeToString(raw), nil
 }
 
 // createSession mints a token and stores its hash against userID.

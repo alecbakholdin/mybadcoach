@@ -14,12 +14,13 @@ import (
 	"github.com/alecbakholdin/mybadcoach/server/internal/gameplay"
 	matchesv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/matches/v1"
 	"github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/matches/v1/matchesv1connect"
+	idgen "github.com/alecbakholdin/mybadcoach/server/internal/id"
 	"github.com/alecbakholdin/mybadcoach/server/internal/reduce"
 	"github.com/alecbakholdin/mybadcoach/server/internal/slugify"
 )
 
-// MatchService implements the MatchService Connect handler's structure half.
-// The gameplay RPCs belong to ticket 05 and return CodeUnimplemented.
+// MatchService implements the MatchService Connect handler: match structure
+// plus the gameplay event log, match state/stats, and event append/read RPCs.
 type MatchService struct {
 	base
 }
@@ -54,7 +55,7 @@ func (s *MatchService) CreateMatch(
 	if pointCapPresent && pointCap < 0 {
 		return nil, invalidArgument(fieldViolation("point_cap", "must not be negative"))
 	}
-	id, err := newID()
+	id, err := idgen.New()
 	if err != nil {
 		return nil, internalError()
 	}

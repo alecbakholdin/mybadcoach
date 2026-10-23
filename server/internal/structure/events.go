@@ -10,6 +10,7 @@ import (
 	"github.com/alecbakholdin/mybadcoach/server/internal/db"
 	eventsv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/events/v1"
 	"github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/events/v1/eventsv1connect"
+	idgen "github.com/alecbakholdin/mybadcoach/server/internal/id"
 	"github.com/alecbakholdin/mybadcoach/server/internal/slugify"
 )
 
@@ -44,7 +45,7 @@ func (s *EventService) CreateEvent(
 	if validationErr != nil {
 		return nil, validationErr
 	}
-	id, err := newID()
+	id, err := idgen.New()
 	if err != nil {
 		return nil, internalError()
 	}
@@ -238,7 +239,7 @@ func (s *EventService) AddEventRosterEntry(
 	if err != nil {
 		return nil, err
 	}
-	entryID, err := newID()
+	entryID, err := idgen.New()
 	if err != nil {
 		return nil, internalError()
 	}

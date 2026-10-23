@@ -17,6 +17,7 @@ import (
 	authv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/auth/v1"
 	"github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/auth/v1/authv1connect"
 	errorsv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/errors/v1"
+	idgen "github.com/alecbakholdin/mybadcoach/server/internal/id"
 )
 
 const (
@@ -111,11 +112,11 @@ func (s *Service) createUser(
 	if err != nil {
 		return User{}, fmt.Errorf("hash password: %w", err)
 	}
-	userID, err := newID()
+	userID, err := idgen.New()
 	if err != nil {
 		return User{}, err
 	}
-	identityID, err := newID()
+	identityID, err := idgen.New()
 	if err != nil {
 		return User{}, err
 	}

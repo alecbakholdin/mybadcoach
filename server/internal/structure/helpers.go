@@ -1,9 +1,7 @@
 package structure
 
 import (
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -21,20 +19,7 @@ import (
 	teamsv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/teams/v1"
 )
 
-const (
-	idBytes         = 16
-	defaultPageSize = 50
-)
-
-// newID returns a random 32-character lowercase hex id (16 random bytes),
-// matching the ids minted by the auth service and database seed.
-func newID() (string, error) {
-	raw := make([]byte, idBytes)
-	if _, err := rand.Read(raw); err != nil {
-		return "", fmt.Errorf("generate id: %w", err)
-	}
-	return hex.EncodeToString(raw), nil
-}
+const defaultPageSize = 50
 
 // timestamp returns the current time as a UTC RFC3339Nano string, the
 // storage convention for created_at columns.
@@ -42,14 +27,18 @@ func (b *base) timestamp() string {
 	return b.now().UTC().Format(time.RFC3339Nano)
 }
 
-// pageBounds normalizes offset/limit: a negative offset becomes zero and a
-// non-positive limit becomes the default page size.
+// pageBounds normalizes offset/limit: a negative offset becomes zero, an
+// unset limit (zero) becomes the default page size, and a negative limit
+// clamps to one, so a page always requests at least one row.
 func pageBounds(offset, limit int32) (normalizedOffset, normalizedLimit int64) {
 	if offset < 0 {
 		offset = 0
 	}
-	if limit <= 0 {
+	switch {
+	case limit == 0:
 		limit = defaultPageSize
+	case limit < 0:
+		limit = 1
 	}
 	return int64(offset), int64(limit)
 }

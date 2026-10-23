@@ -130,6 +130,17 @@ func TestSeasonCRUDScopedSlugsAndPagination(t *testing.T) {
 		t.Fatalf("default page size = %d, want 3", len(defaulted.Msg.GetSeasons()))
 	}
 
+	clamped, err := owner.seasons.ListSeasons(ctx, connect.NewRequest(&seasonsv1.ListSeasonsRequest{
+		TeamSlug: team.GetSlug(),
+		Limit:    -5,
+	}))
+	if err != nil {
+		t.Fatalf("ListSeasons negative limit: %v", err)
+	}
+	if len(clamped.Msg.GetSeasons()) != 1 {
+		t.Fatalf("negative limit page size = %d, want clamped to 1", len(clamped.Msg.GetSeasons()))
+	}
+
 	if _, err := owner.seasons.CreateSeason(ctx, connect.NewRequest(&seasonsv1.CreateSeasonRequest{
 		TeamSlug: team.GetSlug(),
 		Name:     "   ",
