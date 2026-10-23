@@ -23,6 +23,7 @@ const (
 	codeInvalidArgument  = "invalid_argument"
 	codeAlreadyExists    = "already_exists"
 	codeSessionExpired   = "session_expired"
+	codeIDConflict       = "id_conflict"
 )
 
 // newError builds a Connect error carrying the machine-readable ErrorDetail,
@@ -85,6 +86,20 @@ func lastOwnerError() *connect.Error {
 
 func alreadyExistsError(message string) *connect.Error {
 	return newError(connect.CodeAlreadyExists, codeAlreadyExists, message, nil)
+}
+
+// idConflictError rejects an event id whose stored content differs from the
+// submitted event. The id is a client-chosen idempotency key, so re-using it
+// with different content is a client bug rather than a retry.
+func idConflictError(field string) *connect.Error {
+	return newError(
+		connect.CodeInvalidArgument,
+		codeIDConflict,
+		"match event id already used with different content",
+		[]*errorsv1.FieldViolation{
+			fieldViolation(field, "id already used with different content"),
+		},
+	)
 }
 
 func sessionExpiredError() *connect.Error {

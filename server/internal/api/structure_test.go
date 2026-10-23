@@ -3,7 +3,6 @@ package api_test
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -240,19 +239,6 @@ func createMatch(
 		t.Fatalf("CreateMatch(%q): %v", opponentName, err)
 	}
 	return response.Msg.GetMatch()
-}
-
-// assertCode requires err to be a Connect error with the given code, without
-// requiring a machine-readable detail (used for CodeUnimplemented).
-func assertCode(t *testing.T, err error, code connect.Code) {
-	t.Helper()
-	var connectErr *connect.Error
-	if !errors.As(err, &connectErr) {
-		t.Fatalf("error = %v, want a *connect.Error", err)
-	}
-	if connectErr.Code() != code {
-		t.Fatalf("connect code = %v, want %v", connectErr.Code(), code)
-	}
 }
 
 func countRows(t *testing.T, sqlDB *sql.DB, query string, args ...any) int64 {
@@ -572,10 +558,12 @@ func TestMembershipManagementAndLastOwnerGuard(t *testing.T) {
 		t.Fatalf("remove demoted owner: %v", err)
 	}
 
-	t.Run("GetTeamRecord belongs to ticket 05", func(t *testing.T) {
+	t.Run("GetTeamRecord requires team membership", func(t *testing.T) {
 		_, err := owner.teams.GetTeamRecord(ctx, connect.NewRequest(&teamsv1.GetTeamRecordRequest{
 			TeamSlug: team.GetSlug(),
 		}))
-		assertCode(t, err, connect.CodeUnimplemented)
+		// The owner was removed above, so the subtest doubles as the
+		// non-member gate.
+		assertConnectError(t, err, connect.CodePermissionDenied, "permission_denied")
 	})
 }

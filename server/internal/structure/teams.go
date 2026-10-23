@@ -10,6 +10,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/alecbakholdin/mybadcoach/server/internal/db"
+	"github.com/alecbakholdin/mybadcoach/server/internal/gameplay"
 	teamsv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/teams/v1"
 	"github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/teams/v1/teamsv1connect"
 	"github.com/alecbakholdin/mybadcoach/server/internal/slugify"
@@ -323,13 +324,57 @@ func (s *TeamService) RemoveMembership(
 	return connect.NewResponse(&teamsv1.RemoveMembershipResponse{}), nil
 }
 
-// GetTeamRecord is owned by ticket 05 (gameplay reads).
+// GetTeamRecord computes the team's W/L/T record from its matches' gameplay
+// events, optionally scoped to one season.
+//
+// The opponent is faceless (ADR-0003) and logs no events, so only our score is
+// derivable: it is the number of live (non-tombstoned) SCORE events in the
+// match, and the opponent score is taken as zero. Only matches with at least
+// one logged SCORE event count as completed — an unplayed or in-progress match
+// must not appear as a 0-0 tie. Match completion (time caps, forfeits) is out
+// of scope, mirroring computeTeamRecord in packages/shared/src/teamRecord.ts.
 func (s *TeamService) GetTeamRecord(
-	_ context.Context,
-	_ *connect.Request[teamsv1.GetTeamRecordRequest],
+	ctx context.Context,
+	req *connect.Request[teamsv1.GetTeamRecordRequest],
 ) (*connect.Response[teamsv1.GetTeamRecordResponse], error) {
-	return nil, connect.NewError(
-		connect.CodeUnimplemented,
-		errors.New("GetTeamRecord is implemented by ticket 05"),
-	)
+	_, team, _, err := s.authorizeTeam(ctx, req.Msg.GetTeamSlug())
+	if err != nil {
+		return nil, err
+	}
+
+	var seasonID any
+	if seasonSlug, present := stringPointer(req.Msg.SeasonSlug); present {
+		season, seasonErr := s.seasonBySlug(ctx, team.ID, seasonSlug)
+		if seasonErr != nil {
+			return nil, seasonErr
+		}
+		seasonID = season.ID
+	}
+
+	rows, err := s.queries.ListTeamMatchScores(ctx, db.ListTeamMatchScoresParams{
+		OurTeamID: team.ID,
+		SeasonID:  seasonID,
+	})
+	if err != nil {
+		return nil, internalError()
+	}
+
+	scores := make([]gameplay.MatchScore, 0, len(rows))
+	for _, row := range rows {
+		if row.Goals == 0 {
+			continue
+		}
+		scores = append(scores, gameplay.MatchScore{
+			OurScore:      row.Goals,
+			OpponentScore: 0,
+		})
+	}
+	record := gameplay.ComputeTeamRecord(scores)
+	return connect.NewResponse(&teamsv1.GetTeamRecordResponse{
+		Record: &teamsv1.TeamRecord{
+			Wins:   record.Wins,
+			Losses: record.Losses,
+			Ties:   record.Ties,
+		},
+	}), nil
 }

@@ -668,7 +668,7 @@ func TestMatchCRUDAndGameplayStubs(t *testing.T) {
 		t.Fatalf("matches = %d/%d, want 2/2", len(matches.Msg.GetMatches()), matches.Msg.GetTotal())
 	}
 
-	t.Run("gameplay reads and append are ticket 05", func(t *testing.T) {
+	t.Run("gameplay endpoints accept an empty log", func(t *testing.T) {
 		eventKey := func() (string, string, string, string) {
 			return team.GetSlug(), season.GetSlug(), event.GetSlug(), match.GetSlug()
 		}
@@ -682,9 +682,11 @@ func TestMatchCRUDAndGameplayStubs(t *testing.T) {
 				MatchSlug:  matchSlug,
 			}),
 		)
-		assertCode(t, err, connect.CodeUnimplemented)
-		if appendResponse != nil {
-			t.Fatal("AppendMatchEvents returned a response")
+		if err != nil {
+			t.Fatalf("AppendMatchEvents: %v", err)
+		}
+		if len(appendResponse.Msg.GetAcceptedIds()) != 0 || len(appendResponse.Msg.GetSkippedDuplicateIds()) != 0 {
+			t.Fatalf("append response = %v, want no ids", appendResponse.Msg)
 		}
 		listResponse, err := member.matches.ListMatchEvents(
 			ctx,
@@ -695,9 +697,11 @@ func TestMatchCRUDAndGameplayStubs(t *testing.T) {
 				MatchSlug:  matchSlug,
 			}),
 		)
-		assertCode(t, err, connect.CodeUnimplemented)
-		if listResponse != nil {
-			t.Fatal("ListMatchEvents returned a response")
+		if err != nil {
+			t.Fatalf("ListMatchEvents: %v", err)
+		}
+		if listResponse.Msg.GetTotal() != 0 || len(listResponse.Msg.GetEvents()) != 0 {
+			t.Fatalf("list response = %v, want an empty log", listResponse.Msg)
 		}
 		stateResponse, err := member.matches.GetMatchState(
 			ctx,
@@ -708,9 +712,11 @@ func TestMatchCRUDAndGameplayStubs(t *testing.T) {
 				MatchSlug:  matchSlug,
 			}),
 		)
-		assertCode(t, err, connect.CodeUnimplemented)
-		if stateResponse != nil {
-			t.Fatal("GetMatchState returned a response")
+		if err != nil {
+			t.Fatalf("GetMatchState: %v", err)
+		}
+		if len(stateResponse.Msg.GetPoints()) != 0 {
+			t.Fatalf("state = %v, want no points", stateResponse.Msg)
 		}
 		statsResponse, err := member.matches.GetMatchStats(
 			ctx,
@@ -721,9 +727,11 @@ func TestMatchCRUDAndGameplayStubs(t *testing.T) {
 				MatchSlug:  matchSlug,
 			}),
 		)
-		assertCode(t, err, connect.CodeUnimplemented)
-		if statsResponse != nil {
-			t.Fatal("GetMatchStats returned a response")
+		if err != nil {
+			t.Fatalf("GetMatchStats: %v", err)
+		}
+		if len(statsResponse.Msg.GetPlayerStats()) != 0 {
+			t.Fatalf("stats = %v, want no players", statsResponse.Msg)
 		}
 	})
 

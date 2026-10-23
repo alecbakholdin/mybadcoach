@@ -69,6 +69,32 @@ func TestEventStorageColumnsRejectsPayloadTypeMismatch(t *testing.T) {
 	}
 }
 
+func TestEventStorageColumnsIsStableAcrossEncodes(t *testing.T) {
+	event := &matchesv1.MatchEvent{
+		Type: matchesv1.MatchEventType_MATCH_EVENT_TYPE_SCORE,
+		Payload: &matchesv1.MatchEvent_Score{
+			Score: &matchesv1.ScorePayload{PlayerId: "player-b", AssistPlayerId: "player-a"},
+		},
+	}
+
+	_, want, err := EventStorageColumns(event)
+	if err != nil {
+		t.Fatalf("EventStorageColumns: %v", err)
+	}
+	// protojson randomizes insignificant whitespace by design; the storage
+	// encoding must be canonical anyway, because it is also the idempotency
+	// comparison key.
+	for attempt := 0; attempt < 50; attempt++ {
+		_, payload, encodeErr := EventStorageColumns(event)
+		if encodeErr != nil {
+			t.Fatalf("EventStorageColumns attempt %d: %v", attempt, encodeErr)
+		}
+		if payload != want {
+			t.Fatalf("payload differs across encodes: %q != %q", payload, want)
+		}
+	}
+}
+
 func TestSetPayloadFromStorageRoundTrips(t *testing.T) {
 	original := &matchesv1.MatchEvent{
 		Id:          "evt-sub",

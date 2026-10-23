@@ -8,6 +8,7 @@
 package gameplay
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 
@@ -187,7 +188,15 @@ func EventStorageColumns(event *matchesv1.MatchEvent) (eventType, payload string
 	if err != nil {
 		return "", "", fmt.Errorf("encode %s payload: %w", eventType, err)
 	}
-	return eventType, string(encoded), nil
+	// protojson deliberately randomizes insignificant whitespace (see its
+	// encoder's detrand calls), so compact it before storing: the column is
+	// also the idempotency comparison key, and an unstable encoding would make
+	// replays look like conflicting content.
+	var compact bytes.Buffer
+	if err := json.Compact(&compact, encoded); err != nil {
+		return "", "", fmt.Errorf("compact %s payload: %w", eventType, err)
+	}
+	return eventType, compact.String(), nil
 }
 
 // eventPayload returns the oneof member when it matches the event's declared

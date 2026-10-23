@@ -12,6 +12,7 @@ import (
 	"connectrpc.com/connect"
 
 	"github.com/alecbakholdin/mybadcoach/server/internal/db"
+	"github.com/alecbakholdin/mybadcoach/server/internal/gameplay"
 	authv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/auth/v1"
 	eventsv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/events/v1"
 	matchesv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/matches/v1"
@@ -185,6 +186,23 @@ func matchMessage(match *db.Match) *matchesv1.Match {
 		ScheduledAt:  nullStringValue(match.ScheduledAt),
 		PointCap:     nullInt64Value(match.PointCap),
 	}
+}
+
+// matchEventMessage maps a stored gameplay event to its proto message,
+// decoding the payload according to the row's short type name.
+func matchEventMessage(row *db.MatchEvent) (*matchesv1.MatchEvent, error) {
+	event := &matchesv1.MatchEvent{
+		Id:          row.ID,
+		MatchId:     row.MatchID,
+		PointNumber: row.PointNumber,
+		EffectiveTs: row.EffectiveTs,
+		CreatedAt:   row.CreatedAt,
+		Deleted:     row.Deleted != 0,
+	}
+	if err := gameplay.SetPayloadFromStorage(event, row.Type, row.Payload); err != nil {
+		return nil, fmt.Errorf("decode stored match event %s: %w", row.ID, err)
+	}
+	return event, nil
 }
 
 // playerMessage maps a stored player to its proto message, decoding its JSON
