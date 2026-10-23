@@ -1,7 +1,6 @@
 package db_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/alecbakholdin/mybadcoach/server/internal/db"
@@ -12,7 +11,7 @@ func TestSeedDoesNothingWithoutDevFlag(t *testing.T) {
 	t.Setenv(db.SeedEnvVar, "")
 	sqlDB := openTestDB(t)
 
-	if err := db.Seed(context.Background(), sqlDB); err != nil {
+	if err := db.Seed(t.Context(), sqlDB); err != nil {
 		t.Fatalf("Seed: %v", err)
 	}
 
@@ -28,7 +27,7 @@ func TestSeedDoesNothingWithoutDevFlag(t *testing.T) {
 func TestSeedCreatesAdminIdempotently(t *testing.T) {
 	t.Setenv(db.SeedEnvVar, "1")
 	sqlDB := openTestDB(t)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	for run := 1; run <= 2; run++ {
 		if err := db.Seed(ctx, sqlDB); err != nil {

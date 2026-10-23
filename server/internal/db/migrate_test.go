@@ -1,7 +1,6 @@
 package db_test
 
 import (
-	"context"
 	"database/sql"
 	"path/filepath"
 	"slices"
@@ -167,7 +166,7 @@ func TestMigrateRollsBackFailedMigration(t *testing.T) {
 			Data: []byte("CREATE TABLE after_broken (id TEXT PRIMARY KEY) STRICT;"),
 		},
 	}
-	if err := db.Migrate(context.Background(), sqlDB, failing); err == nil {
+	if err := db.Migrate(t.Context(), sqlDB, failing); err == nil {
 		t.Fatal("Migrate with a broken migration returned nil, want an error")
 	}
 
@@ -225,7 +224,7 @@ func TestMigrateAppliesMigrationsInLexicographicOrder(t *testing.T) {
 			Data: []byte("INSERT INTO ordered (id) VALUES ('first');"),
 		},
 	}
-	if err := db.Migrate(context.Background(), sqlDB, migrations); err != nil {
+	if err := db.Migrate(t.Context(), sqlDB, migrations); err != nil {
 		t.Fatalf("Migrate: %v", err)
 	}
 
@@ -288,7 +287,7 @@ func TestMigrateBootstrapsWithoutSchemaMigrations(t *testing.T) {
 			),
 		},
 	}
-	err = db.Migrate(context.Background(), raw, migrations)
+	err = db.Migrate(t.Context(), raw, migrations)
 	if err != nil {
 		t.Fatalf("Migrate on a fresh database: %v", err)
 	}

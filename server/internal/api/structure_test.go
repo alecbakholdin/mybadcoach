@@ -1,7 +1,6 @@
 package api_test
 
 import (
-	"context"
 	"database/sql"
 	"net/http"
 	"net/http/cookiejar"
@@ -88,7 +87,7 @@ func (e *structureEnv) newActor(email string) *structureActor {
 		connect.WithInterceptors(browserHeaders("")),
 	)
 	registered, err := authClient.Register(
-		context.Background(),
+		e.t.Context(),
 		connect.NewRequest(&authv1.RegisterRequest{
 			Email:    email,
 			Password: testLoginPassword,
@@ -146,7 +145,7 @@ func ptrTo[T any](value T) *T {
 func createTeam(t *testing.T, actor *structureActor, name string) *teamsv1.Team {
 	t.Helper()
 	response, err := actor.teams.CreateTeam(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&teamsv1.CreateTeamRequest{Name: name}),
 	)
 	if err != nil {
@@ -163,7 +162,7 @@ func createSeason(
 ) *seasonsv1.Season {
 	t.Helper()
 	response, err := actor.seasons.CreateSeason(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&seasonsv1.CreateSeasonRequest{
 			TeamSlug: teamSlug,
 			Name:     name,
@@ -184,7 +183,7 @@ func createEvent(
 ) *eventsv1.Event {
 	t.Helper()
 	response, err := actor.events.CreateEvent(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&eventsv1.CreateEventRequest{
 			TeamSlug:   teamSlug,
 			SeasonSlug: seasonSlug,
@@ -205,7 +204,7 @@ func createPlayer(
 ) *playersv1.Player {
 	t.Helper()
 	response, err := actor.players.CreatePlayer(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&playersv1.CreatePlayerRequest{
 			TeamSlug: teamSlug,
 			Names:    names,
@@ -227,7 +226,7 @@ func createMatch(
 ) *matchesv1.Match {
 	t.Helper()
 	response, err := actor.matches.CreateMatch(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.CreateMatchRequest{
 			TeamSlug:     teamSlug,
 			SeasonSlug:   seasonSlug,
@@ -252,7 +251,7 @@ func countRows(t *testing.T, sqlDB *sql.DB, query string, args ...any) int64 {
 
 func TestTeamCRUDAndSlugStability(t *testing.T) {
 	env := newStructureEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := env.newActor("owner@example.com")
 
 	first := createTeam(t, owner, "Alpha Squad")
@@ -344,7 +343,7 @@ func TestTeamSlugFallbackForNonLatinName(t *testing.T) {
 
 func TestTeamGating(t *testing.T) {
 	env := newStructureEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := env.newActor("owner@example.com")
 	member := env.newActor("member@example.com")
 	outsider := env.newActor("outsider@example.com")
@@ -453,7 +452,7 @@ func TestTeamGating(t *testing.T) {
 
 func TestMembershipManagementAndLastOwnerGuard(t *testing.T) {
 	env := newStructureEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := env.newActor("owner@example.com")
 	member := env.newActor("member@example.com")
 	team := createTeam(t, owner, "Membership Team")

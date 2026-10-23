@@ -114,7 +114,7 @@ func (h *harness) clientWithHeaders(origin string) authv1connect.AuthServiceClie
 
 func (h *harness) register(email, password, name string) (*connect.Response[authv1.RegisterResponse], error) {
 	h.t.Helper()
-	return h.client.Register(context.Background(), connect.NewRequest(&authv1.RegisterRequest{
+	return h.client.Register(h.t.Context(), connect.NewRequest(&authv1.RegisterRequest{
 		Email:    email,
 		Password: password,
 		Name:     name,
@@ -196,7 +196,7 @@ func errorMachineCode(t *testing.T, err *connect.Error) string {
 
 func TestRegisterMeLogoutMe(t *testing.T) {
 	h := newHarness(t)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	registered, err := h.register(testEmail, testPassword, testName)
 	if err != nil {
@@ -246,7 +246,7 @@ func TestRegisterMeLogoutMe(t *testing.T) {
 
 func TestLoginSymmetry(t *testing.T) {
 	h := newHarness(t)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	if _, err := h.register(testEmail, testPassword, testName); err != nil {
 		t.Fatalf("Register: %v", err)
@@ -298,7 +298,7 @@ func TestLoginSymmetry(t *testing.T) {
 
 func TestRegisterValidation(t *testing.T) {
 	h := newHarness(t)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	cases := []struct {
 		name      string
@@ -372,7 +372,7 @@ func TestRegisterDuplicate(t *testing.T) {
 
 func TestExpiredSessionRejected(t *testing.T) {
 	h := newHarness(t)
-	ctx := context.Background()
+	ctx := t.Context()
 
 	registered, err := h.register(testEmail, testPassword, testName)
 	if err != nil {
@@ -448,7 +448,7 @@ func findCookie(t *testing.T, cookies []*http.Cookie, name string) *http.Cookie 
 
 func TestCSRFPosture(t *testing.T) {
 	register := func(client authv1connect.AuthServiceClient) error {
-		_, err := client.Register(context.Background(), connect.NewRequest(&authv1.RegisterRequest{
+		_, err := client.Register(t.Context(), connect.NewRequest(&authv1.RegisterRequest{
 			Email:    testEmail,
 			Password: testPassword,
 			Name:     testName,
@@ -497,7 +497,7 @@ func TestCSRFPosture(t *testing.T) {
 			t.Fatalf("Register: %v", err)
 		}
 		if _, err := h.bareClient.Me(
-			context.Background(),
+			t.Context(),
 			connect.NewRequest(&authv1.MeRequest{}),
 		); err != nil {
 			t.Fatalf("Me without the CSRF header: %v", err)

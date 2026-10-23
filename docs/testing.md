@@ -91,7 +91,8 @@ inputs. Committing proto/schema changes without the toolchain installed fails th
 - **Shared (TypeScript):** Vitest, colocated with the module (`packages/shared/src/*.test.ts`).
   Pure functions only: the reducer, aggregation, slug logic.
 - **Server (Go):** stdlib `testing`, table-driven where behavior varies over inputs. The
-  existing `internal/reduce` and `internal/slugify` suites are the pattern.
+  existing `internal/reduce` and `internal/slugify` suites are the pattern. Tests take their
+  contexts from `t.Context()`, never `context.Background()`.
 - **Client (Svelte):** Vitest for extracted logic (stores, derived state). Component rendering
   behavior is covered at the e2e seam; do not build a parallel component-testing harness unless
   a seam proves too slow for a case.

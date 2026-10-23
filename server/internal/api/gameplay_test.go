@@ -1,7 +1,6 @@
 package api_test
 
 import (
-	"context"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -46,7 +45,7 @@ func (f *gameplayFixture) appendEvents(t *testing.T, events ...*matchesv1.MatchE
 	t.Helper()
 
 	response, err := f.actor.matches.AppendMatchEvents(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.AppendMatchEventsRequest{
 			TeamSlug:   f.teamSlug,
 			SeasonSlug: f.seasonSlug,
@@ -159,7 +158,7 @@ func TestAppendMatchEventsRejectsIDReuseWithDifferentContent(t *testing.T) {
 	fixture.appendEvents(t, touchEvent("evt-touch", 1, 1000, "player-a"))
 
 	_, err := fixture.actor.matches.AppendMatchEvents(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.AppendMatchEventsRequest{
 			TeamSlug:   fixture.teamSlug,
 			SeasonSlug: fixture.seasonSlug,
@@ -220,7 +219,7 @@ func TestAppendMatchEventsValidatesTheWholeBatchBeforeWriting(t *testing.T) {
 		Payload: &matchesv1.MatchEvent_Drop{Drop: &matchesv1.DropPayload{PlayerId: "player-a"}},
 	}
 	_, err := fixture.actor.matches.AppendMatchEvents(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.AppendMatchEventsRequest{
 			TeamSlug:   fixture.teamSlug,
 			SeasonSlug: fixture.seasonSlug,
@@ -240,7 +239,7 @@ func TestAppendMatchEventsValidatesTheWholeBatchBeforeWriting(t *testing.T) {
 	}
 
 	_, err = fixture.actor.matches.AppendMatchEvents(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.AppendMatchEventsRequest{
 			TeamSlug:   fixture.teamSlug,
 			SeasonSlug: fixture.seasonSlug,
@@ -261,7 +260,7 @@ func TestAppendMatchEventsRejectsMoreThanOneBatchCap(t *testing.T) {
 		events[index] = touchEvent("evt-"+string(rune('a'+index%26)), 1, int64(index), "player-a")
 	}
 	_, err := fixture.actor.matches.AppendMatchEvents(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.AppendMatchEventsRequest{
 			TeamSlug:   fixture.teamSlug,
 			SeasonSlug: fixture.seasonSlug,
@@ -280,7 +279,7 @@ func TestAppendMatchEventsRejectsAnEventForAnotherMatch(t *testing.T) {
 	foreign := touchEvent("evt-foreign", 1, 1000, "player-a")
 	foreign.MatchId = "another-match"
 	_, err := fixture.actor.matches.AppendMatchEvents(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.AppendMatchEventsRequest{
 			TeamSlug:   fixture.teamSlug,
 			SeasonSlug: fixture.seasonSlug,
@@ -312,7 +311,7 @@ func TestListMatchEventsFiltersByPointAndPaginates(t *testing.T) {
 	}
 
 	pointTwo, err := fixture.actor.matches.ListMatchEvents(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.ListMatchEventsRequest{
 			TeamSlug:    fixture.teamSlug,
 			SeasonSlug:  fixture.seasonSlug,
@@ -332,7 +331,7 @@ func TestListMatchEventsFiltersByPointAndPaginates(t *testing.T) {
 	}
 
 	page, err := fixture.actor.matches.ListMatchEvents(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.ListMatchEventsRequest{
 			TeamSlug:   fixture.teamSlug,
 			SeasonSlug: fixture.seasonSlug,
@@ -415,7 +414,7 @@ func TestGetMatchStatsAggregatesEveryPoint(t *testing.T) {
 	)
 
 	response, err := fixture.actor.matches.GetMatchStats(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.GetMatchStatsRequest{
 			TeamSlug:   fixture.teamSlug,
 			SeasonSlug: fixture.seasonSlug,
@@ -488,7 +487,7 @@ func TestGetTeamRecordScopesToASeason(t *testing.T) {
 	record := func(seasonSlug *string) *teamsv1.TeamRecord {
 		t.Helper()
 		response, err := actor.teams.GetTeamRecord(
-			context.Background(),
+			t.Context(),
 			connect.NewRequest(&teamsv1.GetTeamRecordRequest{
 				TeamSlug:   team.GetSlug(),
 				SeasonSlug: seasonSlug,
@@ -511,7 +510,7 @@ func TestGetTeamRecordScopesToASeason(t *testing.T) {
 	appendTo := func(seasonSlug, eventSlug, matchSlug, eventID string) {
 		t.Helper()
 		if _, err := actor.matches.AppendMatchEvents(
-			context.Background(),
+			t.Context(),
 			connect.NewRequest(&matchesv1.AppendMatchEventsRequest{
 				TeamSlug:   team.GetSlug(),
 				SeasonSlug: seasonSlug,
@@ -537,7 +536,7 @@ func TestGetTeamRecordScopesToASeason(t *testing.T) {
 	}
 
 	_, err := actor.teams.GetTeamRecord(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&teamsv1.GetTeamRecordRequest{
 			TeamSlug:   team.GetSlug(),
 			SeasonSlug: ptrTo("missing"),
@@ -562,7 +561,7 @@ func listEvents(t *testing.T, fixture *gameplayFixture) *matchesv1.ListMatchEven
 	t.Helper()
 
 	response, err := fixture.actor.matches.ListMatchEvents(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.ListMatchEventsRequest{
 			TeamSlug:   fixture.teamSlug,
 			SeasonSlug: fixture.seasonSlug,
@@ -580,7 +579,7 @@ func matchState(t *testing.T, fixture *gameplayFixture) *matchesv1.GetMatchState
 	t.Helper()
 
 	response, err := fixture.actor.matches.GetMatchState(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&matchesv1.GetMatchStateRequest{
 			TeamSlug:   fixture.teamSlug,
 			SeasonSlug: fixture.seasonSlug,
@@ -598,7 +597,7 @@ func teamRecord(t *testing.T, actor *structureActor, teamSlug string, seasonSlug
 	t.Helper()
 
 	response, err := actor.teams.GetTeamRecord(
-		context.Background(),
+		t.Context(),
 		connect.NewRequest(&teamsv1.GetTeamRecordRequest{
 			TeamSlug:   teamSlug,
 			SeasonSlug: seasonSlug,

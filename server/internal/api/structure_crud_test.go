@@ -1,7 +1,6 @@
 package api_test
 
 import (
-	"context"
 	"database/sql"
 	"testing"
 
@@ -16,7 +15,7 @@ import (
 
 func TestSeasonCRUDScopedSlugsAndPagination(t *testing.T) {
 	env := newStructureEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := env.newActor("owner@example.com")
 	team := createTeam(t, owner, "Season Team")
 
@@ -154,7 +153,7 @@ func TestSeasonCRUDScopedSlugsAndPagination(t *testing.T) {
 
 func TestSeasonDeleteGatingAndCascade(t *testing.T) {
 	env := newStructureEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := env.newActor("owner@example.com")
 	member := env.newActor("member@example.com")
 	team := createTeam(t, owner, "Cascade Team")
@@ -227,7 +226,7 @@ func TestSeasonDeleteGatingAndCascade(t *testing.T) {
 
 func TestCopySeasonRosterSkipsExistingPlayers(t *testing.T) {
 	env := newStructureEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := env.newActor("owner@example.com")
 	team := createTeam(t, owner, "Roster Team")
 	from := createSeason(t, owner, team.GetSlug(), "From")
@@ -302,7 +301,7 @@ func TestCopySeasonRosterSkipsExistingPlayers(t *testing.T) {
 
 func TestEventCRUDScopedSlugsAndRoster(t *testing.T) {
 	env := newStructureEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := env.newActor("owner@example.com")
 	member := env.newActor("member@example.com")
 	team := createTeam(t, owner, "Event Team")
@@ -441,7 +440,7 @@ func TestEventCRUDScopedSlugsAndRoster(t *testing.T) {
 
 func TestPlayerCRUDNamesAndCascade(t *testing.T) {
 	env := newStructureEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := env.newActor("owner@example.com")
 	member := env.newActor("member@example.com")
 	team := createTeam(t, owner, "Player Team")
@@ -578,7 +577,7 @@ func TestPlayerCRUDNamesAndCascade(t *testing.T) {
 
 func TestMatchCRUDAndGameplayStubs(t *testing.T) {
 	env := newStructureEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := env.newActor("owner@example.com")
 	member := env.newActor("member@example.com")
 	team := createTeam(t, owner, "Match Team")
@@ -765,7 +764,7 @@ func TestMatchCRUDAndGameplayStubs(t *testing.T) {
 
 func TestDeleteTeamCascadesEverything(t *testing.T) {
 	env := newStructureEnv(t)
-	ctx := context.Background()
+	ctx := t.Context()
 	owner := env.newActor("owner@example.com")
 	team := createTeam(t, owner, "Doomed Team")
 	season := createSeason(t, owner, team.GetSlug(), "Season")
