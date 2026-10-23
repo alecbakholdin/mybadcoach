@@ -261,6 +261,14 @@ createServer((req, res) => {
 }).listen(process.env.FAKE_API_PORT ?? 5174);
 ```
 
+The API base URL must reach the app as configuration, not a code change. SvelteKit 3 declares it
+with `defineEnvVars` and exposes it via `$app/env/public` only when `public: true`; values are
+dynamic by default ("the value is read from the environment when the app starts"), while
+`static: true` inlines "the build time value ... into the bundle". Keep the URL dynamic (or build
+the preview with the test value) so the Playwright `webServer` env takes effect
+([SvelteKit env docs](https://svelte.dev/docs/kit/@sveltejs-kit-env)). A same-origin alternative
+is Vite's `server.proxy`, which avoids CORS entirely ([Vite server options](https://vite.dev/config/server-options)).
+
 Playwright starts it alongside SvelteKit with the array form of `webServer`; each entry has
 `command`, `url` (readiness; 2xx/3xx/400–403), `reuseExistingServer`, and `env`
 ([Playwright web server docs](https://playwright.dev/docs/test-webserver)):
@@ -376,10 +384,12 @@ For the chosen stub server, the fake API surface is:
 - Auth/session behavior faithful to ticket 04: login sets the real cookie; logout clears it;
   unauthorized calls return `unauthenticated`. This is where a stub server is strictly better
   than browser-level fakes.
-- CORS and credentials configured to match production (exact origin, allow
-  `content-type`, `connect-protocol-version`, `connect-timeout-ms`,
-  `connect-content-encoding`, `connect-accept-encoding`, allow credentials) if the API origin
-  differs from the app origin.
+- CORS and credentials configured to match production (exact origin, allow credentials) if the
+  API origin differs from the app origin. `@connectrpc/connect` exports the exact allow/expose
+  lists: `cors.allowedMethods` (`POST`, `GET`), `cors.allowedHeaders` (content type, protocol
+  version, timeout, encodings), and `cors.exposedHeaders`, with the documented instruction to add
+  any application-specific headers
+  ([source](https://github.com/connectrpc/connect-es/blob/main/packages/connect/src/cors.ts)).
 
 ## Open questions / caveats
 
@@ -420,7 +430,12 @@ Primary sources consulted:
 - `connectNodeAdapter` source and README:
   <https://github.com/connectrpc/connect-es/blob/main/packages/connect-node/src/connect-node-adapter.ts>,
   <https://github.com/connectrpc/connect-es/blob/main/packages/connect-node/README.md>
-- Connect Node getting started: <https://connectrpc.com/docs/node/getting-started>
+- Connect Node getting started and server plugins: <https://connectrpc.com/docs/node/getting-started>,
+  <https://connectrpc.com/docs/node/server-plugins/>
+- Connect-ES example server: <https://github.com/connectrpc/connect-es/blob/main/packages/example/src/server.ts>
+- Connect CORS helpers: <https://github.com/connectrpc/connect-es/blob/main/packages/connect/src/cors.ts>
+- SvelteKit environment variables: <https://svelte.dev/docs/kit/@sveltejs-kit-env>
+- Vite server options: <https://vite.dev/config/server-options>
 - MSW browser integration: <https://mswjs.io/docs/integrations/browser>
 - MSW streaming: <https://mswjs.io/docs/http/mocking-responses/streaming>
 - MSW cookies: <https://mswjs.io/docs/http/mocking-responses/cookies>
