@@ -14,7 +14,7 @@
     "test": "npm run test:shared && npm run test:server",
     "test:shared": "npm run test -w packages/shared",
     "test:server": "cd server && go test ./...",
-    "build:server": "cd server && go build ./cmd/server",
+    "build:server": "cd server && go build -o ../dist/server ./cmd/server",
     "dev:client": "npm run dev -w apps/client",
     "build:client": "npm run build -w apps/client"
   }
