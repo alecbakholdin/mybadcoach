@@ -46,9 +46,10 @@ type Config struct {
 
 // Service implements authv1connect.AuthServiceHandler.
 type Service struct {
-	db     *sql.DB
-	now    func() time.Time
-	secure bool
+	db      *sql.DB
+	queries *db.Queries
+	now     func() time.Time
+	secure  bool
 }
 
 var _ authv1connect.AuthServiceHandler = (*Service)(nil)
@@ -56,9 +57,10 @@ var _ authv1connect.AuthServiceHandler = (*Service)(nil)
 // NewService builds an auth Service.
 func NewService(cfg Config) *Service {
 	return &Service{
-		db:     cfg.DB,
-		secure: cfg.Secure,
-		now:    nowOr(cfg.Now),
+		db:      cfg.DB,
+		queries: db.New(cfg.DB),
+		secure:  cfg.Secure,
+		now:     nowOr(cfg.Now),
 	}
 }
 
@@ -90,7 +92,7 @@ func (s *Service) Register(
 		return nil, internalError()
 	}
 
-	token, err := createSession(ctx, s.db, user.ID, s.now())
+	token, err := createSession(ctx, s.queries, user.ID, s.now())
 	if err != nil {
 		return nil, internalError()
 	}
@@ -127,15 +129,14 @@ func (s *Service) createUser(
 		return User{}, fmt.Errorf("begin register: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
+	q := s.queries.WithTx(tx)
 
-	if _, err := tx.ExecContext(
-		ctx,
-		"INSERT INTO users (id, email, name, created_at) VALUES (?, ?, ?, ?)",
-		userID,
-		email,
-		name,
-		now,
-	); err != nil {
+	if err := q.CreateUser(ctx, db.CreateUserParams{
+		ID:        userID,
+		Email:     email,
+		Name:      name,
+		CreatedAt: now,
+	}); err != nil {
 		if isUniqueViolation(err) {
 			return User{}, newConnectError(
 				connect.CodeAlreadyExists,
@@ -146,27 +147,21 @@ func (s *Service) createUser(
 		}
 		return User{}, fmt.Errorf("insert user: %w", err)
 	}
-	if _, err := tx.ExecContext(
-		ctx,
-		`INSERT INTO auth_identities
-		 (id, user_id, provider, provider_subject, email, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
-		identityID,
-		userID,
-		db.PasswordProvider,
-		email,
-		email,
-		now,
-	); err != nil {
+	if err := q.CreateAuthIdentity(ctx, db.CreateAuthIdentityParams{
+		ID:              identityID,
+		UserID:          userID,
+		Provider:        db.PasswordProvider,
+		ProviderSubject: email,
+		Email:           email,
+		CreatedAt:       now,
+	}); err != nil {
 		return User{}, fmt.Errorf("insert identity: %w", err)
 	}
-	if _, err := tx.ExecContext(
-		ctx,
-		"INSERT INTO password_credentials (user_id, password_hash, updated_at) VALUES (?, ?, ?)",
-		userID,
-		string(hash),
-		now,
-	); err != nil {
+	if err := q.CreatePasswordCredential(ctx, db.CreatePasswordCredentialParams{
+		UserID:       userID,
+		PasswordHash: string(hash),
+		UpdatedAt:    now,
+	}); err != nil {
 		return User{}, fmt.Errorf("insert password credential: %w", err)
 	}
 	if err := tx.Commit(); err != nil {
@@ -184,18 +179,7 @@ func (s *Service) Login(
 	email := normalizeEmail(req.Msg.GetEmail())
 	password := req.Msg.GetPassword()
 
-	var (
-		user User
-		hash string
-	)
-	err := s.db.QueryRowContext(
-		ctx,
-		`SELECT u.id, u.email, u.name, p.password_hash
-		 FROM users u
-		 JOIN password_credentials p ON p.user_id = u.id
-		 WHERE u.email = ?`,
-		email,
-	).Scan(&user.ID, &user.Email, &user.Name, &hash)
+	row, err := s.queries.GetUserWithPasswordHash(ctx, email)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		// Burn a bcrypt comparison so an unknown email is not observably
@@ -206,11 +190,13 @@ func (s *Service) Login(
 		return nil, internalError()
 	}
 
-	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
+	if bcrypt.CompareHashAndPassword([]byte(row.PasswordHash), []byte(password)) != nil {
 		return nil, invalidCredentialsError()
 	}
 
-	token, err := createSession(ctx, s.db, user.ID, s.now())
+	user := User{ID: row.ID, Email: row.Email, Name: row.Name}
+
+	token, err := createSession(ctx, s.queries, user.ID, s.now())
 	if err != nil {
 		return nil, internalError()
 	}
@@ -227,7 +213,7 @@ func (s *Service) Logout(
 	req *connect.Request[authv1.LogoutRequest],
 ) (*connect.Response[authv1.LogoutResponse], error) {
 	if raw, ok := tokenFromHeaders(req.Header()); ok {
-		if err := deleteSession(ctx, s.db, raw); err != nil {
+		if err := deleteSession(ctx, s.queries, raw); err != nil {
 			return nil, internalError()
 		}
 	}

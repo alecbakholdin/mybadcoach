@@ -55,9 +55,9 @@ func Seed(ctx context.Context, sqlDB *sql.DB) error {
 		return fmt.Errorf("begin seed: %w", err)
 	}
 	defer func() { _ = tx.Rollback() }()
+	q := New(tx)
 
-	var existingID string
-	err = tx.QueryRowContext(ctx, "SELECT id FROM users WHERE email = ?", DevAdminEmail).Scan(&existingID)
+	_, err = q.GetUserByEmail(ctx, DevAdminEmail)
 	switch {
 	case err == nil:
 		return nil
@@ -79,37 +79,29 @@ func Seed(ctx context.Context, sqlDB *sql.DB) error {
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
 
-	if _, err := tx.ExecContext(
-		ctx,
-		"INSERT INTO users (id, email, name, created_at) VALUES (?, ?, ?, ?)",
-		userID,
-		DevAdminEmail,
-		devAdminName,
-		now,
-	); err != nil {
+	if err := q.CreateUser(ctx, CreateUserParams{
+		ID:        userID,
+		Email:     DevAdminEmail,
+		Name:      devAdminName,
+		CreatedAt: now,
+	}); err != nil {
 		return fmt.Errorf("insert dev user: %w", err)
 	}
-	if _, err := tx.ExecContext(
-		ctx,
-		`INSERT INTO auth_identities
-		 (id, user_id, provider, provider_subject, email, created_at)
-		 VALUES (?, ?, ?, ?, ?, ?)`,
-		identityID,
-		userID,
-		PasswordProvider,
-		DevAdminEmail,
-		DevAdminEmail,
-		now,
-	); err != nil {
+	if err := q.CreateAuthIdentity(ctx, CreateAuthIdentityParams{
+		ID:              identityID,
+		UserID:          userID,
+		Provider:        PasswordProvider,
+		ProviderSubject: DevAdminEmail,
+		Email:           DevAdminEmail,
+		CreatedAt:       now,
+	}); err != nil {
 		return fmt.Errorf("insert dev identity: %w", err)
 	}
-	if _, err := tx.ExecContext(
-		ctx,
-		"INSERT INTO password_credentials (user_id, password_hash, updated_at) VALUES (?, ?, ?)",
-		userID,
-		string(hash),
-		now,
-	); err != nil {
+	if err := q.CreatePasswordCredential(ctx, CreatePasswordCredentialParams{
+		UserID:       userID,
+		PasswordHash: string(hash),
+		UpdatedAt:    now,
+	}); err != nil {
 		return fmt.Errorf("insert dev password credential: %w", err)
 	}
 	if err := tx.Commit(); err != nil {

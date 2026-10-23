@@ -9,6 +9,7 @@ import (
 
 	"connectrpc.com/connect"
 
+	"github.com/alecbakholdin/mybadcoach/server/internal/db"
 	"github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/auth/v1/authv1connect"
 )
 
@@ -52,7 +53,7 @@ type MiddlewareConfig struct {
 // rejects unauthenticated access to protected procedures, and enforces the
 // CSRF posture on mutating procedures.
 type Middleware struct {
-	db            *sql.DB
+	queries       *db.Queries
 	now           func() time.Time
 	mutating      map[string]struct{}
 	authenticated map[string]struct{}
@@ -64,7 +65,7 @@ type Middleware struct {
 // name for RPC requests.
 func NewMiddleware(cfg MiddlewareConfig) *Middleware {
 	return &Middleware{
-		db:            cfg.DB,
+		queries:       db.New(cfg.DB),
 		now:           nowOr(cfg.Now),
 		mutating:      procedureSet(DefaultMutatingProcedures(), cfg.AdditionalMutatingProcedures),
 		authenticated: procedureSet(DefaultAuthenticatedProcedures(), cfg.AdditionalAuthenticatedProcedures),
@@ -77,7 +78,7 @@ func NewMiddleware(cfg MiddlewareConfig) *Middleware {
 func (m *Middleware) Session(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		if raw, ok := tokenFromRequest(request); ok {
-			session, found, err := lookupSession(request.Context(), m.db, raw, m.now())
+			session, found, err := lookupSession(request.Context(), m.queries, raw, m.now())
 			if err != nil {
 				m.writeError(writer, request, internalError())
 				return

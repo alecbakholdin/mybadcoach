@@ -12,6 +12,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/alecbakholdin/mybadcoach/server/internal/db"
 )
 
 const (
@@ -55,21 +57,17 @@ func hashToken(raw string) string {
 }
 
 // createSession mints a token and stores its hash against userID.
-func createSession(ctx context.Context, db *sql.DB, userID string, now time.Time) (sessionToken, error) {
+func createSession(ctx context.Context, q *db.Queries, userID string, now time.Time) (sessionToken, error) {
 	token, err := newSessionToken(now)
 	if err != nil {
 		return sessionToken{}, err
 	}
-	_, err = db.ExecContext(
-		ctx,
-		`INSERT INTO sessions (token_hash, user_id, expires_at, created_at)
-		 VALUES (?, ?, ?, ?)`,
-		token.hash,
-		userID,
-		token.expiry.Unix(),
-		now.UTC().Format(time.RFC3339Nano),
-	)
-	if err != nil {
+	if err := q.CreateSession(ctx, db.CreateSessionParams{
+		TokenHash: token.hash,
+		UserID:    userID,
+		ExpiresAt: token.expiry.Unix(),
+		CreatedAt: now.UTC().Format(time.RFC3339Nano),
+	}); err != nil {
 		return sessionToken{}, fmt.Errorf("insert session: %w", err)
 	}
 	return token, nil
@@ -79,23 +77,12 @@ func createSession(ctx context.Context, db *sql.DB, userID string, now time.Time
 // sessions are deleted and reported as not found.
 func lookupSession(
 	ctx context.Context,
-	db *sql.DB,
+	q *db.Queries,
 	raw string,
 	now time.Time,
 ) (Session, bool, error) {
 	hash := hashToken(raw)
-	var (
-		expiresUnix int64
-		user        User
-	)
-	err := db.QueryRowContext(
-		ctx,
-		`SELECT s.expires_at, u.id, u.email, u.name
-		 FROM sessions s
-		 JOIN users u ON u.id = s.user_id
-		 WHERE s.token_hash = ?`,
-		hash,
-	).Scan(&expiresUnix, &user.ID, &user.Email, &user.Name)
+	row, err := q.GetSessionByTokenHash(ctx, hash)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return Session{}, false, nil
@@ -103,21 +90,18 @@ func lookupSession(
 		return Session{}, false, fmt.Errorf("look up session: %w", err)
 	}
 
-	expiresAt := time.Unix(expiresUnix, 0).UTC()
+	expiresAt := time.Unix(row.ExpiresAt, 0).UTC()
 	if !expiresAt.After(now) {
-		deleteSessionHash(ctx, db, hash)
+		deleteSessionHash(ctx, q, hash)
 		return Session{}, false, nil
 	}
+	user := User{ID: row.ID, Email: row.Email, Name: row.Name}
 	return Session{TokenHash: hash, User: user}, true, nil
 }
 
 // deleteSession removes the session identified by a raw cookie token.
-func deleteSession(ctx context.Context, db *sql.DB, raw string) error {
-	if _, err := db.ExecContext(
-		ctx,
-		"DELETE FROM sessions WHERE token_hash = ?",
-		hashToken(raw),
-	); err != nil {
+func deleteSession(ctx context.Context, q *db.Queries, raw string) error {
+	if err := q.DeleteSessionByTokenHash(ctx, hashToken(raw)); err != nil {
 		return fmt.Errorf("delete session: %w", err)
 	}
 	return nil
@@ -126,6 +110,6 @@ func deleteSession(ctx context.Context, db *sql.DB, raw string) error {
 // deleteSessionHash removes a session by its stored hash. Cleanup of an
 // expired session is best effort: a failed delete leaves a row that is still
 // ignored on the next lookup.
-func deleteSessionHash(ctx context.Context, db *sql.DB, hash string) {
-	_, _ = db.ExecContext(ctx, "DELETE FROM sessions WHERE token_hash = ?", hash)
+func deleteSessionHash(ctx context.Context, q *db.Queries, hash string) {
+	_ = q.DeleteSessionByTokenHash(ctx, hash)
 }
