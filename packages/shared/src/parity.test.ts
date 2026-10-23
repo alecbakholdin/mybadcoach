@@ -4,9 +4,9 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import type { MatchEvent } from './events';
 import { reducePoint } from './index';
-import type { PlayerStats, PointDerivedState, StartingRole } from './state';
+import type { FixtureEvent, FixturePointState, FixturePlayerStats } from './mapping';
+import { matchEventFromJSON, pointStateToJSON, startingRoleFromShortName } from './mapping';
 
 /**
  * One shared fixtures directory at the repo root, executed by both this suite
@@ -40,9 +40,9 @@ const PLAYER_STAT_KEYS = [
 interface Fixture {
   file: string;
   name: string;
-  initialRole: StartingRole;
-  events: MatchEvent[];
-  expected: PointDerivedState;
+  initialRole: string;
+  events: unknown[];
+  expected: FixturePointState;
 }
 
 function readFixtures(): Fixture[] {
@@ -54,7 +54,10 @@ function readFixtures(): Fixture[] {
     .filter((file) => file.endsWith('.json'))
     .sort()
     .map((file) => {
-      const parsed = JSON.parse(readFileSync(join(FIXTURES_DIR, file), 'utf8')) as Omit<Fixture, 'file'>;
+      const parsed = JSON.parse(readFileSync(join(FIXTURES_DIR, file), 'utf8')) as Omit<
+        Fixture,
+        'file'
+      >;
       return { file, ...parsed };
     });
 }
@@ -107,7 +110,7 @@ function assertNoNullish(value: unknown, path = '$'): void {
 }
 
 /** Every player-stats entry is complete, zero-filled, and non-negative. */
-function assertZeroFilledStats(playerStats: Record<string, PlayerStats>): void {
+function assertZeroFilledStats(playerStats: Record<string, FixturePlayerStats>): void {
   for (const [playerId, stats] of Object.entries(playerStats)) {
     expect(Object.keys(stats).sort(), `stats keys for ${playerId}`).toEqual([...PLAYER_STAT_KEYS]);
     for (const [stat, value] of Object.entries(stats)) {
@@ -126,7 +129,10 @@ describe('shared parity fixtures', () => {
 
   for (const fixture of fixtures) {
     it(`${fixture.file}: ${fixture.name}`, () => {
-      const actual = reducePoint(fixture.events, fixture.initialRole);
+      const events = fixture.events.map((raw) => matchEventFromJSON(raw as FixtureEvent));
+      const actual = pointStateToJSON(
+        reducePoint(events, startingRoleFromShortName(fixture.initialRole)),
+      );
 
       assertNoNullish(actual);
       assertZeroFilledStats(actual.playerStats);

@@ -1,54 +1,65 @@
+import { create } from '@bufbuild/protobuf';
 import { describe, expect, it } from 'vitest';
 
-import type { MatchEvent } from './events';
+import {
+  MatchEventSchema,
+  MatchEventType,
+  SetLineupPayloadSchema,
+  StartingRole,
+  TouchPayloadSchema,
+  View,
+} from './gen/mybadcoach/matches/v1/matches_pb';
+import type { MatchEvent } from './gen/mybadcoach/matches/v1/matches_pb';
+import { pointStateToJSON } from './mapping';
 import { reducePoint } from './reducer';
 
 const createdAt = '2026-03-14T09:00:00Z';
 
 function touch(id: string, effectiveTs: number, playerId: string): MatchEvent {
-  return {
+  return create(MatchEventSchema, {
     id,
     matchId: 'match-1',
-    pointNumber: 1,
-    effectiveTs,
+    pointNumber: 1n,
+    effectiveTs: BigInt(effectiveTs),
     createdAt,
     deleted: false,
-    type: 'TOUCH',
-    payload: { playerId },
-  };
+    type: MatchEventType.TOUCH,
+    payload: { case: 'touch', value: create(TouchPayloadSchema, { playerId }) },
+  });
 }
 
 function setLineup(id: string, effectiveTs: number, playerIds: string[]): MatchEvent {
-  return {
+  return create(MatchEventSchema, {
     id,
     matchId: 'match-1',
-    pointNumber: 1,
-    effectiveTs,
+    pointNumber: 1n,
+    effectiveTs: BigInt(effectiveTs),
     createdAt,
     deleted: false,
-    type: 'SET_LINEUP',
-    payload: { playerIds },
-  };
+    type: MatchEventType.SET_LINEUP,
+    payload: { case: 'setLineup', value: create(SetLineupPayloadSchema, { playerIds }) },
+  });
 }
 
 describe('reducePoint', () => {
   it('starts an empty point in lineup setup with zero-filled state', () => {
-    const state = reducePoint([], 'OFFENSE');
+    const state = reducePoint([], StartingRole.OFFENSE);
 
-    expect(state).toEqual({
+    expect(pointStateToJSON(state)).toEqual({
       view: 'LINEUP_SETUP',
       initialRole: 'OFFENSE',
       lineup: [],
       thrower: '',
       playerStats: {},
     });
+    expect(state.view).toBe(View.LINEUP_SETUP);
   });
 
   it('records a defensive starting role without changing the initial view', () => {
-    const state = reducePoint([], 'DEFENSE');
+    const state = reducePoint([], StartingRole.DEFENSE);
 
-    expect(state.view).toBe('LINEUP_SETUP');
-    expect(state.initialRole).toBe('DEFENSE');
+    expect(state.view).toBe(View.LINEUP_SETUP);
+    expect(state.initialRole).toBe(StartingRole.DEFENSE);
   });
 
   it('applies SET_LINEUP events in effectiveTs order, then waits for the pull', () => {
@@ -57,26 +68,26 @@ describe('reducePoint', () => {
         setLineup('evt-lineup-late', 2_000, ['player-c', 'player-d']),
         setLineup('evt-lineup-early', 1_000, ['player-a', 'player-b']),
       ],
-      'OFFENSE',
+      StartingRole.OFFENSE,
     );
 
     expect(state.lineup).toEqual(['player-c', 'player-d']);
-    expect(state.view).toBe('PULL_WAIT');
+    expect(state.view).toBe(View.PULL_WAIT);
   });
 
   it('credits a TOUCH and records the thrower in offense possession', () => {
-    const state = reducePoint([touch('evt-touch', 1_000, 'player-a')], 'OFFENSE');
+    const state = reducePoint([touch('evt-touch', 1_000, 'player-a')], StartingRole.OFFENSE);
 
     expect(state.thrower).toBe('player-a');
-    expect(state.view).toBe('OFFENSE_POSSESSION');
-    expect(state.playerStats['player-a']).toEqual({
-      touches: 1,
-      completions: 0,
-      drops: 0,
-      turnovers: 0,
-      blocks: 0,
-      goals: 0,
-      assists: 0,
+    expect(state.view).toBe(View.OFFENSE_POSSESSION);
+    expect(state.playerStats['player-a']).toMatchObject({
+      touches: 1n,
+      completions: 0n,
+      drops: 0n,
+      turnovers: 0n,
+      blocks: 0n,
+      goals: 0n,
+      assists: 0n,
     });
   });
 });
