@@ -1,0 +1,47 @@
+{
+  "name": "DEFENSIVE_BLOCK credits a block and gives our team possession",
+  "initialRole": "DEFENSE",
+  "events": [
+    {
+      "id": "evt-lineup",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 1000,
+      "createdAt": "2026-03-14T09:00:01Z",
+      "deleted": false,
+      "type": "SET_LINEUP",
+      "payload": {
+        "playerIds": ["player-1", "player-2"]
+      }
+    },
+    {
+      "id": "evt-block",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 2000,
+      "createdAt": "2026-03-14T09:00:02Z",
+      "deleted": false,
+      "type": "DEFENSIVE_BLOCK",
+      "payload": {
+        "playerId": "player-1"
+      }
+    }
+  ],
+  "expected": {
+    "view": "OFFENSE_POSSESSION",
+    "initialRole": "DEFENSE",
+    "lineup": ["player-1", "player-2"],
+    "thrower": "",
+    "playerStats": {
+      "player-1": {
+        "touches": 0,
+        "completions": 0,
+        "drops": 0,
+        "turnovers": 0,
+        "blocks": 1,
+        "goals": 0,
+        "assists": 0
+      }
+    }
+  }
+}

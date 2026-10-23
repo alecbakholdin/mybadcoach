@@ -16,6 +16,10 @@ var requiredFixtures = []string{
 	"03-duplicate-id-dedupe.json",
 }
 
+// expectedFixtureCount is the full parity suite: every MatchEvent type plus
+// the documented edge cases. Both ports run this exact count.
+const expectedFixtureCount = 24
+
 type fixtureFile struct {
 	Name        string          `json:"name"`
 	InitialRole StartingRole    `json:"initialRole"`
@@ -68,6 +72,10 @@ func loadFixtures(t *testing.T) map[string]fixtureFile {
 
 func TestParityFixtures(t *testing.T) {
 	fixtures := loadFixtures(t)
+
+	if len(fixtures) != expectedFixtureCount {
+		t.Errorf("found %d fixtures, want %d", len(fixtures), expectedFixtureCount)
+	}
 
 	for _, name := range requiredFixtures {
 		if _, ok := fixtures[name]; !ok {

@@ -1,0 +1,68 @@
+{
+  "name": "a catch credits the previous thrower with a completion",
+  "initialRole": "OFFENSE",
+  "events": [
+    {
+      "id": "evt-lineup",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 1000,
+      "createdAt": "2026-03-14T09:00:01Z",
+      "deleted": false,
+      "type": "SET_LINEUP",
+      "payload": {
+        "playerIds": ["player-1", "player-2"]
+      }
+    },
+    {
+      "id": "evt-touch-1",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 2000,
+      "createdAt": "2026-03-14T09:00:02Z",
+      "deleted": false,
+      "type": "TOUCH",
+      "payload": {
+        "playerId": "player-1"
+      }
+    },
+    {
+      "id": "evt-touch-2",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 3000,
+      "createdAt": "2026-03-14T09:00:03Z",
+      "deleted": false,
+      "type": "TOUCH",
+      "payload": {
+        "playerId": "player-2"
+      }
+    }
+  ],
+  "expected": {
+    "view": "OFFENSE_POSSESSION",
+    "initialRole": "OFFENSE",
+    "lineup": ["player-1", "player-2"],
+    "thrower": "player-2",
+    "playerStats": {
+      "player-1": {
+        "touches": 1,
+        "completions": 1,
+        "drops": 0,
+        "turnovers": 0,
+        "blocks": 0,
+        "goals": 0,
+        "assists": 0
+      },
+      "player-2": {
+        "touches": 1,
+        "completions": 0,
+        "drops": 0,
+        "turnovers": 0,
+        "blocks": 0,
+        "goals": 0,
+        "assists": 0
+      }
+    }
+  }
+}

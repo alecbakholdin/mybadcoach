@@ -1,0 +1,62 @@
+{
+  "name": "deleted tombstone events never affect derived state",
+  "initialRole": "OFFENSE",
+  "events": [
+    {
+      "id": "evt-lineup",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 1000,
+      "createdAt": "2026-03-14T09:00:01Z",
+      "deleted": false,
+      "type": "SET_LINEUP",
+      "payload": {
+        "playerIds": ["player-1", "player-2"]
+      }
+    },
+    {
+      "id": "evt-touch-deleted",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 2000,
+      "createdAt": "2026-03-14T09:00:02Z",
+      "deleted": true,
+      "type": "TOUCH",
+      "payload": {
+        "playerId": "player-1"
+      }
+    },
+    {
+      "id": "evt-score-deleted",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 3000,
+      "createdAt": "2026-03-14T09:00:03Z",
+      "deleted": true,
+      "type": "SCORE",
+      "payload": {
+        "playerId": "player-1",
+        "assistPlayerId": ""
+      }
+    },
+    {
+      "id": "evt-turnover-deleted",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 4000,
+      "createdAt": "2026-03-14T09:00:04Z",
+      "deleted": true,
+      "type": "TURNOVER",
+      "payload": {
+        "playerId": "player-2"
+      }
+    }
+  ],
+  "expected": {
+    "view": "PULL_WAIT",
+    "initialRole": "OFFENSE",
+    "lineup": ["player-1", "player-2"],
+    "thrower": "",
+    "playerStats": {}
+  }
+}

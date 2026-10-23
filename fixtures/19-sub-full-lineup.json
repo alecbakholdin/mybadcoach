@@ -1,0 +1,54 @@
+{
+  "name": "a substitution in a full seven-player lineup keeps the lineup at seven",
+  "initialRole": "DEFENSE",
+  "events": [
+    {
+      "id": "evt-lineup",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 1000,
+      "createdAt": "2026-03-14T09:00:01Z",
+      "deleted": false,
+      "type": "SET_LINEUP",
+      "payload": {
+        "playerIds": [
+          "player-1",
+          "player-2",
+          "player-3",
+          "player-4",
+          "player-5",
+          "player-6",
+          "player-7"
+        ]
+      }
+    },
+    {
+      "id": "evt-sub",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 2000,
+      "createdAt": "2026-03-14T09:00:02Z",
+      "deleted": false,
+      "type": "SUB_PLAYER",
+      "payload": {
+        "playerOutId": "player-3",
+        "playerInId": "player-8"
+      }
+    }
+  ],
+  "expected": {
+    "view": "PULL_WAIT",
+    "initialRole": "DEFENSE",
+    "lineup": [
+      "player-1",
+      "player-2",
+      "player-8",
+      "player-4",
+      "player-5",
+      "player-6",
+      "player-7"
+    ],
+    "thrower": "",
+    "playerStats": {}
+  }
+}

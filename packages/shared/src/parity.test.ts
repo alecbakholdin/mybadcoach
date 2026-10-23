@@ -21,6 +21,12 @@ const REQUIRED_FIXTURES = [
   '03-duplicate-id-dedupe.json',
 ];
 
+/**
+ * The full parity suite: every MatchEvent type plus the documented edge cases.
+ * Both ports run this exact count.
+ */
+const EXPECTED_FIXTURE_COUNT = 24;
+
 const PLAYER_STAT_KEYS = [
   'assists',
   'blocks',
@@ -113,7 +119,8 @@ function assertZeroFilledStats(playerStats: Record<string, PlayerStats>): void {
 const fixtures = readFixtures();
 
 describe('shared parity fixtures', () => {
-  it('ships the three tracer-bullet fixtures', () => {
+  it('ships all 24 parity fixtures, including the three tracer bullets', () => {
+    expect(fixtures).toHaveLength(EXPECTED_FIXTURE_COUNT);
     expect(fixtures.map((fixture) => fixture.file)).toEqual(expect.arrayContaining(REQUIRED_FIXTURES));
   });
 

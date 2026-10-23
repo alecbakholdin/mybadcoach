@@ -1,0 +1,37 @@
+{
+  "name": "a later SET_LINEUP replaces the lineup wholesale",
+  "initialRole": "DEFENSE",
+  "events": [
+    {
+      "id": "evt-lineup-early",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 1000,
+      "createdAt": "2026-03-14T09:00:01Z",
+      "deleted": false,
+      "type": "SET_LINEUP",
+      "payload": {
+        "playerIds": ["player-1", "player-2"]
+      }
+    },
+    {
+      "id": "evt-lineup-late",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 2000,
+      "createdAt": "2026-03-14T09:00:02Z",
+      "deleted": false,
+      "type": "SET_LINEUP",
+      "payload": {
+        "playerIds": ["player-3", "player-4", "player-5"]
+      }
+    }
+  ],
+  "expected": {
+    "view": "PULL_WAIT",
+    "initialRole": "DEFENSE",
+    "lineup": ["player-3", "player-4", "player-5"],
+    "thrower": "",
+    "playerStats": {}
+  }
+}

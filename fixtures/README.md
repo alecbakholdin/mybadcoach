@@ -123,14 +123,105 @@ equal** to `expected` under canonical JSON:
 
 ## Current fixtures
 
-| File                            | Pins                                                        |
-| ------------------------------- | ----------------------------------------------------------- |
-| `01-empty-point.json`           | `reducePoint([], "OFFENSE")` returns initial `LINEUP_SETUP`. |
-| `02-out-of-order-sort.json`     | Raw input order is ignored; `effectiveTs` decides.          |
-| `03-duplicate-id-dedupe.json`   | Duplicate ids reduce once (one TOUCH, not two).             |
+The suite is fixed at 24 fixtures; both runners assert that exact count.
 
-Ticket 04 extends this suite to 24 fixtures covering every event type and the documented edge
-cases. The three fixtures above remain part of that suite.
+| File                                    | Pins                                                                       |
+| --------------------------------------- | -------------------------------------------------------------------------- |
+| `01-empty-point.json`                   | `reducePoint([], "OFFENSE")` returns initial `LINEUP_SETUP`.               |
+| `02-out-of-order-sort.json`             | Raw input order is ignored; `effectiveTs` decides.                          |
+| `03-duplicate-id-dedupe.json`           | Duplicate ids reduce once (one TOUCH, not two).                             |
+| `04-set-lineup-full-seven.json`         | A full seven-player lineup is accepted in field order.                      |
+| `05-set-lineup-replaces-lineup.json`    | A later SET_LINEUP replaces the lineup wholesale.                           |
+| `06-touch-credits-completion.json`      | A catch credits the previous thrower with a completion.                     |
+| `07-pull.json`                          | PULL advances to `DEFENSE_ACTIVE`, credits no stat, clears thrower.         |
+| `08-pull-then-touch.json`               | Receiving the pull is a touch, never a completion.                          |
+| `09-drop.json`                          | DROP credits the receiver, clears thrower, flips to defense.                |
+| `10-turnover.json`                      | TURNOVER credits the thrower, clears thrower, flips to defense.             |
+| `11-defensive-block.json`               | A block credits the defender and gives our team possession.                 |
+| `12-block-then-touch.json`              | A block is not a throw: the next touch credits no completion.               |
+| `13-opponent-turnover.json`             | Opponent turnover clears any thrower and credits no player stats.           |
+| `14-score-assisted.json`                | SCORE credits a goal and an assist, then marks the point scored.            |
+| `15-score-callahan-guard.json`          | Empty assist never falls back to the prior thrower; no turnover credited.   |
+| `16-score-callahan-sequence.json`       | Block then unassisted score is a callahan: goal only.                       |
+| `17-sub-player.json`                    | SUB_PLAYER swaps the outgoing player in place.                              |
+| `18-sub-of-thrower.json`                | Substituting the thrower transfers possession to the incoming player.       |
+| `19-sub-full-lineup.json`               | A substitution in a full seven-player lineup keeps the lineup at seven.     |
+| `20-deleted-events-ignored.json`        | Deleted tombstone events never affect derived state.                        |
+| `21-out-of-order-full-sequence.json`    | A whole lineup/touch/touch/score log reduces in `effectiveTs` order.        |
+| `22-duplicate-score-idempotent.json`    | A replayed SCORE id counts once, keeping the first after sorting.           |
+| `23-turnover-recovery-cycle.json`       | Turnovers clear the thrower, so the next catch is not a completion.         |
+| `24-touch-same-player-no-self-completion.json` | A repeated TOUCH by one player never credits a self-completion.      |
+
+## Spec-gap defaults
+
+The original spec named the nine event types but left the effects of seven of them unspecified.
+TOUCH and SET_LINEUP were pinned by the three tracer fixtures; the remaining seven are decided
+here. These defaults are part of the parity contract: both ports implement them identically, and
+every decision below is pinned by at least one of the fixtures in the table above.
+
+Shared conventions:
+
+- Only our team's events are logged; the opponent is faceless (ADR-0003). Opponent actions never
+  produce `playerStats` entries.
+- `initialRole` is an echo of how the point started. It never gates an event: every event applies
+  its own effect, and the view transitions below are absolute.
+- The reducer does not validate rosters or lineup membership. Any player id named by an event may
+  be credited even if it is not in `lineup`.
+- `playerStats` entries are created only when a stat is credited, and are always complete,
+  zero-filled `PlayerStats` values. `thrower` is `""` when nobody on our team has the disc.
+- The canonical case order is TOUCH, DROP, TURNOVER, DEFENSIVE_BLOCK, OPPONENT_TURNOVER, SCORE,
+  SET_LINEUP, SUB_PLAYER, PULL in both languages.
+
+1. **DROP** — Credits `drops + 1` to the named receiver and nothing else. A drop is a receiver
+   fault (GLOSSARY), so it is neither a completion nor a thrower turnover. Clears `thrower` and
+   moves `view` to `DEFENSE_ACTIVE`: the disc is dead and the opponent takes possession
+   (USAU 14.A.1, "a pass is incomplete").
+2. **TURNOVER** — Credits `turnovers + 1` to the named thrower. The throw is not a completion.
+   Clears `thrower` and moves `view` to `DEFENSE_ACTIVE` (USAU 14.A: throwaway, stall, or
+   miscellaneous thrower fault).
+3. **DEFENSIVE_BLOCK** — Credits `blocks + 1` to the named defender, clears `thrower`, and moves
+   `view` to `OFFENSE_POSSESSION`: our team gains the disc. A block is not a completed throw, so
+   clearing `thrower` ensures the next TOUCH does not credit the blocker a completion. If the
+   blocker caught the disc, that TOUCH establishes them as thrower (USAU 14.C: an interception is
+   defensive possession, and the throwing team loses it).
+4. **OPPONENT_TURNOVER** — Credits no player stats: the opponent is faceless (ADR-0003). Clears
+   `thrower` and moves `view` to `OFFENSE_POSSESSION`. Clearing `thrower` prevents a stale id from
+   being credited a completion on the next TOUCH.
+5. **SCORE** — Credits `goals + 1` to the scorer and, when `assistPlayerId` is non-empty,
+   `assists + 1` to the assister. Clears `thrower` and moves `view` to `SCORED`. SCORE is
+   terminal and credits no touch or completion: those belong to TOUCH events, so a scoring play
+   recorded as TOUCH then SCORE counts both parts, while one recorded as SCORE alone counts only
+   the goal/assist. **Callahan guard:** `assistPlayerId: ""` means a defensive score (GLOSSARY:
+   Callahan). The reducer must not fall back to the current `thrower` for an assist or completion,
+   and must not charge a turnover to any player; a SCORE event changes no `turnovers` value
+   (USAU 13: a goal is a catch in the end zone, not a throw).
+6. **SUB_PLAYER** — Credits no stats. Replaces the first occurrence of `playerOutId` in `lineup`
+   with `playerInId`, preserving field order and lineup size, including a full seven-player
+   lineup (USAU 9.C: at most seven players on the field). If `playerOutId` is the current
+   `thrower`, the incoming player becomes the `thrower` (USAU 7.C.3.a: a replacement takes
+   possession when the player in possession leaves injured). If `playerOutId` is not in `lineup`,
+   `lineup` is unchanged; the thrower swap still applies if the id matches. `view` is unchanged.
+   Malformed substitutions (a player not on the field, a player already on the field) are not
+   validated.
+7. **PULL** — Credits no base stat (a pull is not one of the seven tracked stats, ADR-0002).
+   Clears `thrower` and moves `view` to `DEFENSE_ACTIVE`: the event names our puller, so this
+   point is being played on defense (USAU 9.B: after a goal the scoring team pulls). A pull is
+   not a completed pass, so the first TOUCH after receiving it credits no completion.
+
+### Cross-cutting TOUCH and SET_LINEUP behavior
+
+These extend the two event types that already had tracer fixtures; they are pinned by the full
+suite as well.
+
+- **TOUCH** — Credits `touches + 1` to the receiver. If a different player was the current
+  `thrower`, that thrower also gets `completions + 1`: the catch is the only evidence of a
+  completed pass, since there is no PASS event (USAU 3.N.5: a throw is complete when the team
+  retains possession). A same-player TOUCH never credits a self-completion. Sets `thrower` to the
+  receiver and `view` to `OFFENSE_POSSESSION`.
+- **SET_LINEUP** — Replaces `lineup` wholesale with the payload ids in field order and sets
+  `view` to `PULL_WAIT`. A full seven-player lineup is accepted verbatim; the reducer does not
+  enforce the seven-player maximum because the payload is contractually "up to seven".
+
 
 ## Running
 
