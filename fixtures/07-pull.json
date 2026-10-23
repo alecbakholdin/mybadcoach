@@ -1,0 +1,37 @@
+{
+  "name": "PULL advances to defense active and credits no base stat",
+  "initialRole": "DEFENSE",
+  "events": [
+    {
+      "id": "evt-lineup",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 1000,
+      "createdAt": "2026-03-14T09:00:01Z",
+      "deleted": false,
+      "type": "SET_LINEUP",
+      "payload": {
+        "playerIds": ["player-1", "player-2", "player-3"]
+      }
+    },
+    {
+      "id": "evt-pull",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 2000,
+      "createdAt": "2026-03-14T09:00:02Z",
+      "deleted": false,
+      "type": "PULL",
+      "payload": {
+        "playerId": "player-1"
+      }
+    }
+  ],
+  "expected": {
+    "view": "DEFENSE_ACTIVE",
+    "initialRole": "DEFENSE",
+    "lineup": ["player-1", "player-2", "player-3"],
+    "thrower": "",
+    "playerStats": {}
+  }
+}

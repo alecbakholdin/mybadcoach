@@ -6,7 +6,11 @@ plain-text extraction already exist in `docs/reference/`.
 
 **Blocked by:** None (can start immediately).
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] `docs/reference/usau-rules-2026-27.md` exists with rule numbers as headings (grep-able)
-- [ ] `GLOSSARY.md` links to it
+- [x] `docs/reference/usau-rules-2026-27.md` exists with rule numbers as headings (grep-able)
+- [x] `GLOSSARY.md` links to it
+
+## Comments
+
+Resolved by branch `ticket/02-usau-rules-markdown` (5a38c78), merged as d1dbac4. Follow-up for the stranded extraction labels filed at `.scratch/usau-rules-repair/issues/01-repair-extraction-labels.md`.

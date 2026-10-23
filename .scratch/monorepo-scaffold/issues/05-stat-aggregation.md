@@ -5,10 +5,14 @@ including the three derived stats, so a stat table can be rendered for any playe
 
 **Blocked by:** 04 — Full reducer + 24-fixture parity.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] `aggregateMatchStats` sums the seven base stats correctly over reduced points
-- [ ] `receptions`, `throwAttempts`, and `plusMinus` are computed from the base stats
-- [ ] `aggregateEventStats` and `aggregateCareerStats` roll up matches, and `TeamRecord` computes W/L/T
-- [ ] Empty input returns zeroed shapes, never null
-- [ ] `aggregateStats.test.ts` passes
+- [x] `aggregateMatchStats` sums the seven base stats correctly over reduced points
+- [x] `receptions`, `throwAttempts`, and `plusMinus` are computed from the base stats
+- [x] `aggregateEventStats` and `aggregateCareerStats` roll up matches, and `TeamRecord` computes W/L/T
+- [x] Empty input returns zeroed shapes, never null
+- [x] `aggregateStats.test.ts` passes
+
+## Comments
+
+Resolved by branch `ticket/05-stat-aggregation` (cc80f40), merged as 7549113. Receptions = touches (rationale in `aggregateStats.ts`); W/L/T computed from caller-fed `MatchScore` inputs (`teamRecord.ts`).

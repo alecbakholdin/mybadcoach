@@ -1,0 +1,60 @@
+{
+  "name": "a callahan scores from a defensive block with no assist or turnover",
+  "initialRole": "DEFENSE",
+  "events": [
+    {
+      "id": "evt-lineup",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 1000,
+      "createdAt": "2026-03-14T09:00:01Z",
+      "deleted": false,
+      "type": "SET_LINEUP",
+      "payload": {
+        "playerIds": ["player-1", "player-2"]
+      }
+    },
+    {
+      "id": "evt-block",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 2000,
+      "createdAt": "2026-03-14T09:00:02Z",
+      "deleted": false,
+      "type": "DEFENSIVE_BLOCK",
+      "payload": {
+        "playerId": "player-1"
+      }
+    },
+    {
+      "id": "evt-score",
+      "matchId": "match-1",
+      "pointNumber": 1,
+      "effectiveTs": 3000,
+      "createdAt": "2026-03-14T09:00:03Z",
+      "deleted": false,
+      "type": "SCORE",
+      "payload": {
+        "playerId": "player-1",
+        "assistPlayerId": ""
+      }
+    }
+  ],
+  "expected": {
+    "view": "SCORED",
+    "initialRole": "DEFENSE",
+    "lineup": ["player-1", "player-2"],
+    "thrower": "",
+    "playerStats": {
+      "player-1": {
+        "touches": 0,
+        "completions": 0,
+        "drops": 0,
+        "turnovers": 0,
+        "blocks": 1,
+        "goals": 1,
+        "assists": 0
+      }
+    }
+  }
+}

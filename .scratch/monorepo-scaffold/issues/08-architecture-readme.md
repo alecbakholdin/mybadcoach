@@ -6,9 +6,13 @@ clone to green tests.
 
 **Blocked by:** 04 — Full reducer + 24-fixture parity.
 
-**Status:** ready-for-agent
+**Status:** resolved
 
-- [ ] `docs/architecture.md` reproduces the canonical `PointDerivedState` shape, fixture format, and equality rules
-- [ ] The planned SQLite tables reflect the settled model (seasons, two rosters, slugs)
-- [ ] The seven spec-gap defaults are documented
-- [ ] `README.md`'s command table matches the root `package.json` scripts
+- [x] `docs/architecture.md` reproduces the canonical `PointDerivedState` shape, fixture format, and equality rules
+- [x] The planned SQLite tables reflect the settled model (seasons, two rosters, slugs)
+- [x] The seven spec-gap defaults are documented
+- [x] `README.md`'s command table matches the root `package.json` scripts
+
+## Comments
+
+Resolved by branch `ticket/08-architecture-readme` (cbd47bf), merged as 491e151.
