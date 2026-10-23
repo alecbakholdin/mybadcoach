@@ -11,6 +11,11 @@ export default defineConfig({
 			preprocess: vitePreprocess()
 		})
 	],
+	preview: {
+		// The production client is served inside the compose network as
+		// `client`; Vite's DNS-rebinding host check must allow that name.
+		allowedHosts: ['client']
+	},
 	resolve: {
 		alias: {
 			// The shared package is consumed as TypeScript source, with no

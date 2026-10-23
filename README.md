@@ -54,6 +54,23 @@ fixtures.
 | `npm run build:client`  | Build the SvelteKit client for production.                                                     |
 | `npm run verify:rules`  | Verify the checked-in USAU rules Markdown conversion (`scripts/verify-usau-rules-md.sh`).      |
 | `npm run verify:client` | Verify the client skeleton: shared tests, production build, and dev-server SSR.               |
+| `docker compose run --rm e2e` | Full-stack Playwright smoke against the real server, client, and SQLite in the compose network. |
+
+## Containers and the full-stack seam
+
+`docker-compose.yml` orchestrates the Go server, the production SvelteKit client, and the
+Playwright runner on one network. The e2e smoke drives the Connect API directly (register →
+login → team/season/event/match → player/roster → live events → folded state/stats) and loads
+the client to prove it serves. The same command runs locally, in the devcontainer, and in CI:
+
+```sh
+docker compose build
+docker compose run --rm e2e
+docker compose down --volumes   # fresh SQLite for the next run
+```
+
+Every base image, npm package, and CI action introduced by this stack is listed for review in
+`docs/dependencies.md`.
 
 ## Documentation
 

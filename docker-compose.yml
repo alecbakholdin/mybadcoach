@@ -1,0 +1,52 @@
+# The full-stack seam: the Go server, the built SvelteKit client, and the
+# Playwright smoke all run on one network. The same definition is used locally,
+# in the devcontainer, and in CI.
+services:
+  server:
+    build:
+      context: ./server
+    environment:
+      MBC_ADDR: ":8080"
+      MBC_DB_DSN: /data/mbc.db
+      # Development only: seeds admin@mybadcoach.dev / password.
+      MBC_DEV_SEED: "1"
+    volumes:
+      - mbc-data:/data
+    # Host publishing is for manual poking only; the e2e runner addresses the
+    # service by name on the compose network. Override the host side when the
+    # default port is already taken.
+    ports:
+      - "${MBC_SERVER_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "nc", "-z", "-w", "1", "127.0.0.1", "8080"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+    ports:
+      - "${MBC_CLIENT_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  e2e:
+    build:
+      context: ./e2e
+    environment:
+      MBC_SERVER_URL: http://server:8080
+      MBC_CLIENT_URL: http://client:3000
+    depends_on:
+      server:
+        condition: service_healthy
+      client:
+        condition: service_healthy
+    init: true
+
+volumes:
+  mbc-data:

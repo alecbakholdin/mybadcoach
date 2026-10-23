@@ -38,6 +38,11 @@ dist/
 *.tsbuildinfo
 coverage/
 
+# Playwright (e2e)
+test-results/
+playwright-report/
+blob-report/
+
 # Editor/IDE
 # .idea/
 # .vscode/

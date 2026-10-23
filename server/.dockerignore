@@ -1,0 +1,5 @@
+# Local artifacts that must never enter the server build context.
+mbc.db
+*.db
+*.db-shm
+*.db-wal
