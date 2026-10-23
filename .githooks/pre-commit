@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Pre-commit: keep generated code (buf + sqlc) in sync with its inputs.
+#
+# Runs only when the inputs to codegen changed, so unrelated commits stay fast
+# and don't require the codegen toolchain. When the inputs changed, regenerate
+# the outputs and stage them so the commit always carries fresh generated code.
+#
+# Inputs:  proto/ (covers buf.gen.yaml), server/sqlc.yaml, and the migrations +
+#          queries sqlc reads.
+# Outputs: server/internal/gen, packages/shared/src/gen (buf), and
+#          db.go/models.go/*.sql.go in server/internal/db (sqlc).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+INPUT_PATHS=(proto server/sqlc.yaml server/internal/db/migrations server/internal/db/queries)
+
+if git diff --cached --quiet -- "${INPUT_PATHS[@]}"; then
+  exit 0
+fi
+
+echo "pre-commit: regenerating codegen outputs (buf + sqlc)"
+bash "$ROOT/scripts/generate.sh"
+
+git add server/internal/gen packages/shared/src/gen \
+  server/internal/db/db.go server/internal/db/models.go 'server/internal/db/*.sql.go'
+
+echo "pre-commit: staged regenerated outputs"

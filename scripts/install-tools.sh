@@ -27,6 +27,10 @@ GOBIN="$ROOT/.tools/bin" go install "github.com/golangci/golangci-lint/v2/cmd/go
 echo "installing sqlc v${SQLC_VERSION} into .tools/bin"
 GOBIN="$ROOT/.tools/bin" go install "github.com/sqlc-dev/sqlc/cmd/sqlc@v${SQLC_VERSION}"
 
+# Point git at the repo's versioned hooks (.githooks/), so the pre-commit
+# codegen-sync hook is active on this checkout.
+git config core.hooksPath .githooks
+
 echo "done:"
 "$ROOT/.tools/bin/buf" --version
 "$ROOT/.tools/bin/golangci-lint" version

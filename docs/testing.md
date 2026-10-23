@@ -66,6 +66,19 @@ analyzers. Enabled linters, with `issues.exclude-use-default: false` and no
 `.proto` files are the API contract (Connect RPC). `buf lint` runs at the strict level in the same
 gate as the other linters, and `buf breaking` guards against incompatible contract changes.
 
+### Generated code (buf + sqlc)
+
+Generated code is committed, not gitignored: `server/internal/gen` and
+`packages/shared/src/gen` (buf), plus `db.go`/`models.go`/`*.sql.go` in `server/internal/db`
+(sqlc). `.proto` and the migrations/queries are the source of record; the generated files are
+checked in so a fresh checkout builds and tests without the codegen toolchain.
+
+`npm run generate` regenerates all of it. A pre-commit hook (`.githooks/pre-commit`, enabled via
+`git config core.hooksPath .githooks`, which `scripts/install-tools.sh` applies) regenerates and
+re-stages the outputs whenever a codegen input is staged, so a commit cannot drift from its
+inputs. Committing proto/schema changes without the toolchain installed fails the hook with
+`missing required tool: buf`.
+
 ### Lint gates
 
 - `npm run lint` (both languages) must pass before merge; CI runs it on every push.
