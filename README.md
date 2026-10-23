@@ -8,7 +8,7 @@ TypeScript client and the Go server turns the log into live statistics.
 
 - **Node.js 22.17 or newer** — required by the root `engines.node` field (`>=22.17`). It runs the
   shared TypeScript package, the SvelteKit client, and the workspace scripts.
-- **Go 1.22 or newer** — required by `server/go.mod`. It runs the Go server and its half of the
+- **Go 1.27 or newer** — required by `server/go.mod`. It runs the Go server and its half of the
   parity suite.
 
 ## Getting started
