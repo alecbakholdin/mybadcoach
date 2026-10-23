@@ -10,6 +10,9 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/alecbakholdin/mybadcoach/server/internal/gameplay"
+	matchesv1 "github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/matches/v1"
 )
 
 var requiredFixtures = []string{
@@ -23,10 +26,10 @@ var requiredFixtures = []string{
 const expectedFixtureCount = 24
 
 type fixtureFile struct {
-	Name        string          `json:"name"`
-	InitialRole StartingRole    `json:"initialRole"`
-	Events      []MatchEvent    `json:"events"`
-	Expected    json.RawMessage `json:"expected"`
+	Name        string            `json:"name"`
+	InitialRole string            `json:"initialRole"`
+	Events      []json.RawMessage `json:"events"`
+	Expected    json.RawMessage   `json:"expected"`
 }
 
 // fixturesDir resolves the repo-root fixtures directory. `go test` runs with
@@ -95,16 +98,33 @@ func TestParityFixtures(t *testing.T) {
 	for _, name := range names {
 		fixture := fixtures[name]
 		t.Run(name, func(t *testing.T) {
-			actual := ReducePoint(fixture.Events, fixture.InitialRole)
+			role, err := gameplay.StartingRoleFromShortName(fixture.InitialRole)
+			if err != nil {
+				t.Fatalf("fixture %s: %v", name, err)
+			}
 
-			if actual.Lineup == nil {
+			events := make([]*matchesv1.MatchEvent, 0, len(fixture.Events))
+			for index, raw := range fixture.Events {
+				event, decodeErr := gameplay.MatchEventFromJSON(raw)
+				if decodeErr != nil {
+					t.Fatalf("fixture %s: decode event %d: %v", name, index, decodeErr)
+				}
+				events = append(events, event)
+			}
+
+			actual := ReducePoint(events, role)
+			if actual.GetLineup() == nil {
 				t.Fatal("lineup must never be nil")
 			}
-			if actual.PlayerStats == nil {
+			if actual.GetPlayerStats() == nil {
 				t.Fatal("playerStats must never be nil")
 			}
 
-			actualJSON, err := json.Marshal(actual)
+			fixtureState, err := gameplay.PointStateToJSON(actual)
+			if err != nil {
+				t.Fatalf("convert actual state: %v", err)
+			}
+			actualJSON, err := json.Marshal(fixtureState)
 			if err != nil {
 				t.Fatalf("marshal actual state: %v", err)
 			}
