@@ -1,0 +1,12 @@
+{
+  "name": "empty point starts in lineup setup",
+  "initialRole": "OFFENSE",
+  "events": [],
+  "expected": {
+    "view": "LINEUP_SETUP",
+    "initialRole": "OFFENSE",
+    "lineup": [],
+    "thrower": "",
+    "playerStats": {}
+  }
+}
