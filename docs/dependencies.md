@@ -5,14 +5,16 @@ single place to audit the set: npm packages, Go modules, Docker base images,
 and CI actions. See the dependency policy in `docs/testing.md` and `CLAUDE.md`.
 
 Status: the Go/npm backend set below predates ticket 06 and was approved with
-the backend-api map. Ticket 06 adds the container, e2e, and CI categories
-marked **new**; those are the ones awaiting Alec's review.
+the backend-api map. Ticket 06 adds the container, e2e, and CI categories.
+Playwright (`@playwright/test` and the `mcr.microsoft.com/playwright` image) was
+approved by Alec on 2026-10-23; the remaining Docker base images and CI actions
+(marked **new**) still await his review.
 
 ## npm packages
 
 | Package | Version | Scope | Purpose | New |
 | --- | --- | --- | --- | --- |
-| `@playwright/test` | `1.64.1` | `e2e` (independent package) | Browser + HTTP driver for the full-stack smoke. | **new (ticket 06)** |
+| `@playwright/test` | `1.64.1` | `e2e` (independent package) | Browser + HTTP driver for the full-stack smoke. | **approved 2026-10-23** |
 
 Alternatives considered for the e2e driver: Puppeteer (smaller but no test
 runner or API-request fixtures), Cypress (heavier, no first-class API-only
@@ -33,7 +35,7 @@ All images are pinned by tag; none use `latest`.
 | `golang` | `1.27.3-alpine` | server build stage, devcontainer | Compiles `./cmd/server` (also matches `server/go.mod`'s `toolchain go1.27.3`). | **new (ticket 06)** |
 | `alpine` | `3.21` | server runtime stage | Minimal runtime for the static Go binary; supplies `nc` for the healthcheck. | **new (ticket 06)** |
 | `node` | `22.22-alpine` | client build/runtime stage, devcontainer | Builds and previews the SvelteKit client; matches the root `engines.node` floor. | **new (ticket 06)** |
-| `mcr.microsoft.com/playwright` | `v1.64.1-noble` | e2e runner | Official Playwright image; bundles the Chromium build matching `@playwright/test@1.64.1` so CI installs no browsers. | **new (ticket 06)** |
+| `mcr.microsoft.com/playwright` | `v1.64.1-noble` | e2e runner | Official Playwright image; bundles the Chromium build matching `@playwright/test@1.64.1` so CI installs no browsers. | **approved 2026-10-23** |
 
 Alternatives considered: `gcr.io/distroless/static` for the server runtime
 (smaller, but no shell/`nc`, so the compose healthcheck and the local
