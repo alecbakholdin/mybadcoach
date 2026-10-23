@@ -58,15 +58,19 @@ and `docker-cli-compose`.
 These are the standard first-party GitHub actions; no third-party action is
 used.
 
-## Pre-existing backend set (approved with the backend-api map)
+## Backend set (approved with the backend-api map)
 
 Go modules (`server/go.mod`): `connectrpc.com/connect`, `golang.org/x/crypto`,
 `google.golang.org/protobuf`, `modernc.org/sqlite` plus their transitive
 dependencies.
 
 npm packages (`package-lock.json`): SvelteKit/Svelte/Vite/TypeScript/Vitest for
-the client and shared package, `@bufbuild/protobuf`, and the
-`@connectrpc/connect*` runtime packages already present in `apps/client`.
+the client and shared package. The generated-code runtime packages land in this
+branch, in ticket 01, rather than pre-existing: `@bufbuild/protobuf` 2.16.0 in
+`packages/shared`, and `@connectrpc/connect` 2.2.0, `@connectrpc/connect-web`
+2.2.0, and `@connectrpc/connect-node` 2.2.0 (a client devDependency for the
+stub-server seam) in `apps/client`. They were approved with the backend-api map
+before implementation began.
 
 Build-time tools (from `scripts/install-tools.sh` and the dev image): `buf`
 1.75.0, `golangci-lint` 2.15.0, `sqlc` 1.31.1.
