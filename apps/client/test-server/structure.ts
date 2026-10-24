@@ -1,27 +1,42 @@
 /**
- * Fake TeamService + SeasonService for the frontend-only Connect seam.
+ * Fake structure services for the frontend-only Connect seam: TeamService,
+ * SeasonService, EventService, and MatchService.
  *
  * Mirrors the structure-CRUD contract (`.scratch/backend-api/issues/05`):
- * - addressing is by nested slug (`team_slug` [+ `season_slug`]); ids never
- *   appear in requests;
+ * - addressing is by nested slug (`team_slug` [+ `season_slug` [+ `event_slug`]]);
+ *   ids never appear in requests;
  * - the caller must be a team member to read or mutate that team's structure;
  * - `CreateTeam` makes the caller `owner`; `UpdateTeam`, `DeleteTeam`,
  *   `DeleteSeason`, and membership management are owner-only;
+ * - `DeleteEvent` and `DeleteMatch` are member-gated (any member), matching the
+ *   contract;
  * - deletes are hard and cascade.
  *
  * Slugs are generated from the name and are stable across renames (ADR-0006):
- * team slugs are globally unique and season slugs are unique within a team.
- * Season rosters stay empty until players land in ticket 08.
+ * team slugs are globally unique, season slugs are unique within a team, event
+ * slugs within a season, and match slugs (from `opponent_name`) within an event.
+ * Season and event rosters stay empty until ticket 08; the roster RPCs are not
+ * implemented and therefore answer `unimplemented`.
  */
 import { Code, type HandlerContext, type ServiceImpl } from '@connectrpc/connect';
 
 import { connectError, requireUser } from './auth.ts';
-import type { FakeSeason, FakeStore, FakeTeam } from './store.ts';
+import type {
+	FakeEvent,
+	FakeMatch,
+	FakeSeason,
+	FakeStore,
+	FakeTeam
+} from './store.ts';
+import { EventService } from '../../../packages/shared/src/gen/mybadcoach/events/v1/events_pb.ts';
+import { MatchService } from '../../../packages/shared/src/gen/mybadcoach/matches/v1/matches_pb.ts';
 import { SeasonService } from '../../../packages/shared/src/gen/mybadcoach/seasons/v1/seasons_pb.ts';
 import { TeamService } from '../../../packages/shared/src/gen/mybadcoach/teams/v1/teams_pb.ts';
 
 export type TeamImplementation = Partial<ServiceImpl<typeof TeamService>>;
 export type SeasonImplementation = Partial<ServiceImpl<typeof SeasonService>>;
+export type EventImplementation = Partial<ServiceImpl<typeof EventService>>;
+export type MatchImplementation = Partial<ServiceImpl<typeof MatchService>>;
 
 function notFound(message: string): Error {
 	return connectError(Code.NotFound, 'not_found', message);
@@ -84,6 +99,33 @@ function requireSeason(store: FakeStore, teamSlug: string, seasonSlug: string): 
 		throw notFound('season not found');
 	}
 	return season;
+}
+
+function requireEvent(
+	store: FakeStore,
+	teamSlug: string,
+	seasonSlug: string,
+	eventSlug: string
+): FakeEvent {
+	const event = store.findEvent(teamSlug, seasonSlug, eventSlug);
+	if (event === undefined) {
+		throw notFound('event not found');
+	}
+	return event;
+}
+
+function requireMatch(
+	store: FakeStore,
+	teamSlug: string,
+	seasonSlug: string,
+	eventSlug: string,
+	matchSlug: string
+): FakeMatch {
+	const match = store.findMatch(teamSlug, seasonSlug, eventSlug, matchSlug);
+	if (match === undefined) {
+		throw notFound('match not found');
+	}
+	return match;
 }
 
 function teamMessage(team: FakeTeam): FakeTeam {
@@ -225,5 +267,207 @@ export function createSeasonImplementation(store: FakeStore): SeasonImplementati
 			requireSeason(store, request.teamSlug, request.seasonSlug);
 			return { players: [], total: 0n };
 		}
+	};
+}
+
+/** Builds the fake EventService implementation over a store. */
+export function createEventImplementation(store: FakeStore): EventImplementation {
+	return {
+		createEvent(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireSeason(store, request.teamSlug, request.seasonSlug);
+			const event = store.createEvent(
+				request.teamSlug,
+				request.seasonSlug,
+				requiredName(request.name, 'name'),
+				request.startDate ?? '',
+				request.endDate ?? '',
+				request.location ?? ''
+			);
+			if (event === undefined) {
+				throw notFound('season not found');
+			}
+			return { event };
+		},
+
+		getEvent(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireSeason(store, request.teamSlug, request.seasonSlug);
+			return {
+				event: requireEvent(
+					store,
+					request.teamSlug,
+					request.seasonSlug,
+					request.eventSlug
+				)
+			};
+		},
+
+		updateEvent(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireSeason(store, request.teamSlug, request.seasonSlug);
+			requireEvent(store, request.teamSlug, request.seasonSlug, request.eventSlug);
+
+			const patch: { name?: string; startDate?: string; endDate?: string; location?: string } =
+				{};
+			if (request.name !== undefined) {
+				patch.name = requiredName(request.name, 'name');
+			}
+			if (request.startDate !== undefined) {
+				patch.startDate = request.startDate;
+			}
+			if (request.endDate !== undefined) {
+				patch.endDate = request.endDate;
+			}
+			if (request.location !== undefined) {
+				patch.location = request.location;
+			}
+			const event = store.updateEvent(
+				request.teamSlug,
+				request.seasonSlug,
+				request.eventSlug,
+				patch
+			);
+			if (event === undefined) {
+				throw notFound('event not found');
+			}
+			return { event };
+		},
+
+		listEvents(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireSeason(store, request.teamSlug, request.seasonSlug);
+			return {
+				events: store.listEvents(
+					request.teamSlug,
+					request.seasonSlug,
+					request.offset,
+					request.limit
+				),
+				total: BigInt(store.countEvents(request.teamSlug, request.seasonSlug))
+			};
+		},
+
+		// Member-gated, not owner-only (structure contract ticket 05).
+		deleteEvent(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			if (
+				!store.deleteEvent(request.teamSlug, request.seasonSlug, request.eventSlug)
+			) {
+				throw notFound('event not found');
+			}
+			return {};
+		},
+
+		// Roster RPCs land in ticket 08; omitted methods answer `unimplemented`.
+	};
+}
+
+/** Builds the fake MatchService implementation over a store. */
+export function createMatchImplementation(store: FakeStore): MatchImplementation {
+	return {
+		createMatch(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireEvent(store, request.teamSlug, request.seasonSlug, request.eventSlug);
+			const match = store.createMatch(
+				request.teamSlug,
+				request.seasonSlug,
+				request.eventSlug,
+				requiredName(request.opponentName, 'opponent_name'),
+				request.scheduledAt ?? '',
+				request.pointCap ?? 0n
+			);
+			if (match === undefined) {
+				throw notFound('event not found');
+			}
+			return { match };
+		},
+
+		getMatch(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireEvent(store, request.teamSlug, request.seasonSlug, request.eventSlug);
+			return {
+				match: requireMatch(
+					store,
+					request.teamSlug,
+					request.seasonSlug,
+					request.eventSlug,
+					request.matchSlug
+				)
+			};
+		},
+
+		updateMatch(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireEvent(store, request.teamSlug, request.seasonSlug, request.eventSlug);
+			requireMatch(
+				store,
+				request.teamSlug,
+				request.seasonSlug,
+				request.eventSlug,
+				request.matchSlug
+			);
+
+			const patch: { opponentName?: string; scheduledAt?: string; pointCap?: bigint } = {};
+			if (request.opponentName !== undefined) {
+				patch.opponentName = requiredName(request.opponentName, 'opponent_name');
+			}
+			if (request.scheduledAt !== undefined) {
+				patch.scheduledAt = request.scheduledAt;
+			}
+			if (request.pointCap !== undefined) {
+				patch.pointCap = request.pointCap;
+			}
+			const match = store.updateMatch(
+				request.teamSlug,
+				request.seasonSlug,
+				request.eventSlug,
+				request.matchSlug,
+				patch
+			);
+			if (match === undefined) {
+				throw notFound('match not found');
+			}
+			return { match };
+		},
+
+		listMatches(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireEvent(store, request.teamSlug, request.seasonSlug, request.eventSlug);
+			return {
+				matches: store.listMatches(
+					request.teamSlug,
+					request.seasonSlug,
+					request.eventSlug,
+					request.offset,
+					request.limit
+				),
+				total: BigInt(
+					store.countMatches(
+						request.teamSlug,
+						request.seasonSlug,
+						request.eventSlug
+					)
+				)
+			};
+		},
+
+		// Member-gated, not owner-only (structure contract ticket 05).
+		deleteMatch(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			if (
+				!store.deleteMatch(
+					request.teamSlug,
+					request.seasonSlug,
+					request.eventSlug,
+					request.matchSlug
+				)
+			) {
+				throw notFound('match not found');
+			}
+			return {};
+		},
+
+		// Gameplay RPCs (Append/List/State/Stats) are out of scope for this map.
 	};
 }
