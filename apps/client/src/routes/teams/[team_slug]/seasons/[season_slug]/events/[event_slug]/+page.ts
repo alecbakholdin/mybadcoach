@@ -1,6 +1,7 @@
 import {
 	events as eventClient,
 	matches as matchClient,
+	players as playerClient,
 	seasons as seasonClient,
 	teams
 } from '#lib/api';
@@ -32,7 +33,10 @@ export const load = async ({
 		role: '',
 		event: undefined,
 		matches: [],
-		matchesTotal: 0
+		matchesTotal: 0,
+		roster: [],
+		rosterTotal: 0,
+		teamPlayers: []
 	});
 	if ((await session.load()) === null) {
 		return empty();
@@ -43,13 +47,18 @@ export const load = async ({
 		return empty();
 	}
 
-	const [seasonResponse, eventResponse, matchResponse] = await Promise.all([
-		undefinedIfNotFound(seasonClient.getSeason({ teamSlug, seasonSlug })),
-		undefinedIfNotFound(eventClient.getEvent({ teamSlug, seasonSlug, eventSlug })),
-		undefinedIfNotFound(
-			matchClient.listMatches({ teamSlug, seasonSlug, eventSlug, offset: 0, limit: 100 })
-		)
-	]);
+	const [seasonResponse, eventResponse, matchResponse, rosterResponse, playerResponse] =
+		await Promise.all([
+			undefinedIfNotFound(seasonClient.getSeason({ teamSlug, seasonSlug })),
+			undefinedIfNotFound(eventClient.getEvent({ teamSlug, seasonSlug, eventSlug })),
+			undefinedIfNotFound(
+				matchClient.listMatches({ teamSlug, seasonSlug, eventSlug, offset: 0, limit: 100 })
+			),
+			undefinedIfNotFound(
+				eventClient.listEventRoster({ teamSlug, seasonSlug, eventSlug, offset: 0, limit: 100 })
+			),
+			playerClient.listPlayers({ teamSlug, offset: 0, limit: 100 })
+		]);
 	return {
 		teamSlug,
 		seasonSlug,
@@ -59,6 +68,9 @@ export const load = async ({
 		role: membership.role,
 		event: eventResponse?.event,
 		matches: matchResponse?.matches ?? [],
-		matchesTotal: Number(matchResponse?.total ?? 0n)
+		matchesTotal: Number(matchResponse?.total ?? 0n),
+		roster: rosterResponse?.players ?? [],
+		rosterTotal: Number(rosterResponse?.total ?? 0n),
+		teamPlayers: playerResponse.players
 	};
 };

@@ -22,6 +22,14 @@ export interface TeamDetailData {
 	seasons: Season[];
 }
 
+export interface PlayerListData {
+	teamSlug: string;
+	teamName: string;
+	role: string;
+	players: Player[];
+	playersTotal: number;
+}
+
 export interface SeasonDetailData {
 	teamSlug: string;
 	seasonSlug: string;
@@ -32,6 +40,8 @@ export interface SeasonDetailData {
 	eventsTotal: number;
 	roster: Player[];
 	rosterTotal: number;
+	/** Every player on the team, used to pick roster additions. */
+	teamPlayers: Player[];
 }
 
 export interface EventDetailData {
@@ -44,6 +54,10 @@ export interface EventDetailData {
 	event?: Event;
 	matches: Match[];
 	matchesTotal: number;
+	roster: Player[];
+	rosterTotal: number;
+	/** Every player on the team, used to pick roster additions. */
+	teamPlayers: Player[];
 }
 
 export interface MatchDetailData {

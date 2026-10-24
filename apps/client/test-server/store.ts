@@ -63,6 +63,13 @@ export interface FakeMatch {
 	pointCap: bigint;
 }
 
+export interface FakePlayer {
+	id: string;
+	slug: string;
+	/** Display name first, then aliases (the proto list, order significant). */
+	names: string[];
+}
+
 export interface FakeTeamMembership {
 	team: FakeTeam;
 	role: string;
@@ -139,6 +146,12 @@ export class FakeStore {
 	private readonly eventsBySeason = new Map<string, FakeEvent[]>();
 	/** Keyed by `eventKey(...)`; slugs unique within an event. */
 	private readonly matchesByEvent = new Map<string, FakeMatch[]>();
+	/** Insertion order is the stable list order; slugs are unique per team. */
+	private readonly playersByTeamSlug = new Map<string, FakePlayer[]>();
+	/** Season roster: `seasonKey(...)` -> player ids in registration order. */
+	private readonly seasonRosterIds = new Map<string, Set<string>>();
+	/** Event roster: `eventKey(...)` -> player ids in registration order. */
+	private readonly eventRosterIds = new Map<string, Set<string>>();
 
 	/** Clears every user, session, team, and descendants; called between tests. */
 	reset(): void {
@@ -149,6 +162,9 @@ export class FakeStore {
 		this.seasonsByTeamSlug.clear();
 		this.eventsBySeason.clear();
 		this.matchesByEvent.clear();
+		this.playersByTeamSlug.clear();
+		this.seasonRosterIds.clear();
+		this.eventRosterIds.clear();
 	}
 
 	findUserByEmail(email: string): FakeUser | undefined {
@@ -244,7 +260,7 @@ export class FakeStore {
 		return team;
 	}
 
-	/** Hard delete; cascades to the team's seasons, events, and matches. */
+	/** Hard delete; cascades to the team's players, rosters, seasons, and matches. */
 	deleteTeam(slug: string): boolean {
 		if (!this.teamsBySlug.delete(slug)) {
 			return false;
@@ -253,6 +269,7 @@ export class FakeStore {
 			this.deleteSeasonDescendants(slug, season.slug);
 		}
 		this.seasonsByTeamSlug.delete(slug);
+		this.playersByTeamSlug.delete(slug);
 		return true;
 	}
 
@@ -343,13 +360,15 @@ export class FakeStore {
 		return true;
 	}
 
-	/** Drops every event (and match) beneath a season; assumes the season is gone. */
+	/** Drops every event (and its matches/roster) beneath a season; assumes the season is gone. */
 	private deleteSeasonDescendants(teamSlug: string, seasonSlug: string): void {
 		const key = seasonKey(teamSlug, seasonSlug);
 		for (const event of this.eventsBySeason.get(key) ?? []) {
 			this.matchesByEvent.delete(eventKey(teamSlug, seasonSlug, event.slug));
+			this.eventRosterIds.delete(eventKey(teamSlug, seasonSlug, event.slug));
 		}
 		this.eventsBySeason.delete(key);
+		this.seasonRosterIds.delete(key);
 	}
 
 	// ----- Events (slugs are unique within their season) -----
@@ -441,6 +460,7 @@ export class FakeStore {
 		}
 		events.splice(index, 1);
 		this.matchesByEvent.delete(eventKey(teamSlug, seasonSlug, eventSlug));
+		this.eventRosterIds.delete(eventKey(teamSlug, seasonSlug, eventSlug));
 		return true;
 	}
 
@@ -541,5 +561,195 @@ export class FakeStore {
 		}
 		matches.splice(index, 1);
 		return true;
+	}
+
+	// ----- Players (ADR-0006: slugs are unique within their team) -----
+
+	createPlayer(teamSlug: string, names: string[]): FakePlayer | undefined {
+		if (!this.teamsBySlug.has(teamSlug)) {
+			return undefined;
+		}
+		const teamPlayers = this.playersByTeamSlug.get(teamSlug) ?? [];
+		const displayName = names[0] ?? '';
+		const player: FakePlayer = {
+			id: randomUUID(),
+			slug: uniqueSlug(slugify(displayName), (candidate) =>
+				teamPlayers.some((existing) => existing.slug === candidate)
+			),
+			names: [...names]
+		};
+		teamPlayers.push(player);
+		this.playersByTeamSlug.set(teamSlug, teamPlayers);
+		return player;
+	}
+
+	findPlayer(teamSlug: string, playerSlug: string): FakePlayer | undefined {
+		return this.playersByTeamSlug
+			.get(teamSlug)
+			?.find((player) => player.slug === playerSlug);
+	}
+
+	listPlayers(teamSlug: string, offset: number, limit: number): FakePlayer[] {
+		const players = this.playersByTeamSlug.get(teamSlug) ?? [];
+		const start = Math.max(offset, 0);
+		const end = limit > 0 ? start + limit : players.length;
+		return players.slice(start, end);
+	}
+
+	countPlayers(teamSlug: string): number {
+		return this.playersByTeamSlug.get(teamSlug)?.length ?? 0;
+	}
+
+	updatePlayerNames(
+		teamSlug: string,
+		playerSlug: string,
+		names: string[]
+	): FakePlayer | undefined {
+		const player = this.findPlayer(teamSlug, playerSlug);
+		if (player === undefined) {
+			return undefined;
+		}
+		player.names = [...names];
+		return player;
+	}
+
+	/**
+	 * Hard delete; the player's season/event roster rows cascade (ADR-0005).
+	 * Historical match events are a separate log and are untouched.
+	 */
+	deletePlayer(teamSlug: string, playerSlug: string): boolean {
+		const players = this.playersByTeamSlug.get(teamSlug);
+		if (players === undefined) {
+			return false;
+		}
+		const index = players.findIndex((player) => player.slug === playerSlug);
+		if (index === -1) {
+			return false;
+		}
+		const [player] = players.splice(index, 1);
+		if (player === undefined) {
+			return false;
+		}
+		for (const season of this.seasonsByTeamSlug.get(teamSlug) ?? []) {
+			this.seasonRosterIds.get(seasonKey(teamSlug, season.slug))?.delete(player.id);
+			for (const event of this.eventsBySeason.get(seasonKey(teamSlug, season.slug)) ?? []) {
+				this.eventRosterIds
+					.get(eventKey(teamSlug, season.slug, event.slug))
+					?.delete(player.id);
+			}
+		}
+		return true;
+	}
+
+	// ----- Season rosters (UNIQUE(season_id, player_id); duplicate adds no-op) -----
+
+	/** Returns false when the season does not exist; duplicate adds are no-ops. */
+	addSeasonRosterEntry(teamSlug: string, seasonSlug: string, playerId: string): boolean {
+		if (this.findSeason(teamSlug, seasonSlug) === undefined) {
+			return false;
+		}
+		const key = seasonKey(teamSlug, seasonSlug);
+		const ids = this.seasonRosterIds.get(key) ?? new Set<string>();
+		ids.add(playerId);
+		this.seasonRosterIds.set(key, ids);
+		return true;
+	}
+
+	removeSeasonRosterEntry(teamSlug: string, seasonSlug: string, playerId: string): boolean {
+		const key = seasonKey(teamSlug, seasonSlug);
+		if (this.findSeason(teamSlug, seasonSlug) === undefined) {
+			return false;
+		}
+		this.seasonRosterIds.get(key)?.delete(playerId);
+		return true;
+	}
+
+	listSeasonRoster(
+		teamSlug: string,
+		seasonSlug: string,
+		offset: number,
+		limit: number
+	): FakePlayer[] {
+		return this.resolveRoster(
+			teamSlug,
+			this.seasonRosterIds.get(seasonKey(teamSlug, seasonSlug)),
+			offset,
+			limit
+		);
+	}
+
+	countSeasonRoster(teamSlug: string, seasonSlug: string): number {
+		return this.seasonRosterIds.get(seasonKey(teamSlug, seasonSlug))?.size ?? 0;
+	}
+
+	// ----- Event rosters (UNIQUE(event_id, player_id); duplicate adds no-op) -----
+
+	/** Returns false when the event does not exist; duplicate adds are no-ops. */
+	addEventRosterEntry(
+		teamSlug: string,
+		seasonSlug: string,
+		eventSlug: string,
+		playerId: string
+	): boolean {
+		if (this.findEvent(teamSlug, seasonSlug, eventSlug) === undefined) {
+			return false;
+		}
+		const key = eventKey(teamSlug, seasonSlug, eventSlug);
+		const ids = this.eventRosterIds.get(key) ?? new Set<string>();
+		ids.add(playerId);
+		this.eventRosterIds.set(key, ids);
+		return true;
+	}
+
+	removeEventRosterEntry(
+		teamSlug: string,
+		seasonSlug: string,
+		eventSlug: string,
+		playerId: string
+	): boolean {
+		if (this.findEvent(teamSlug, seasonSlug, eventSlug) === undefined) {
+			return false;
+		}
+		this.eventRosterIds.get(eventKey(teamSlug, seasonSlug, eventSlug))?.delete(playerId);
+		return true;
+	}
+
+	listEventRoster(
+		teamSlug: string,
+		seasonSlug: string,
+		eventSlug: string,
+		offset: number,
+		limit: number
+	): FakePlayer[] {
+		return this.resolveRoster(
+			teamSlug,
+			this.eventRosterIds.get(eventKey(teamSlug, seasonSlug, eventSlug)),
+			offset,
+			limit
+		);
+	}
+
+	countEventRoster(teamSlug: string, seasonSlug: string, eventSlug: string): number {
+		return this.eventRosterIds.get(eventKey(teamSlug, seasonSlug, eventSlug))?.size ?? 0;
+	}
+
+	/** Maps a set of roster player ids to players, preserving registration order. */
+	private resolveRoster(
+		teamSlug: string,
+		ids: Set<string> | undefined,
+		offset: number,
+		limit: number
+	): FakePlayer[] {
+		if (ids === undefined) {
+			return [];
+		}
+		const teamPlayers = this.playersByTeamSlug.get(teamSlug) ?? [];
+		const byId = new Map(teamPlayers.map((player) => [player.id, player]));
+		const rostered = [...ids]
+			.map((id) => byId.get(id))
+			.filter((player): player is FakePlayer => player !== undefined);
+		const start = Math.max(offset, 0);
+		const end = limit > 0 ? start + limit : rostered.length;
+		return rostered.slice(start, end);
 	}
 }

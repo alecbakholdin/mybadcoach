@@ -29,6 +29,17 @@
 	let eventError = $state('');
 	let creatingEvent = $state(false);
 
+	let selectedPlayerSlug = $state('');
+	let rosterError = $state('');
+	let rosterBusy = $state(false);
+
+	/** Team players not yet registered on this season's roster. */
+	const availablePlayers = $derived(
+		data.teamPlayers.filter(
+			(player) => !data.roster.some((rostered) => rostered.slug === player.slug)
+		)
+	);
+
 	/** One-line summary of an event's dates and location, omitting blanks. */
 	function eventMeta(event: Event): string {
 		let dates = event.startDate;
@@ -92,6 +103,45 @@
 			}
 		} finally {
 			saving = false;
+		}
+	}
+
+	async function handleAddToRoster(submit: SubmitEvent): Promise<void> {
+		submit.preventDefault();
+		if (selectedPlayerSlug === '') {
+			return;
+		}
+		rosterError = '';
+		rosterBusy = true;
+		try {
+			await seasonClient.addSeasonRosterEntry({
+				teamSlug: data.teamSlug,
+				seasonSlug: data.seasonSlug,
+				playerSlug: selectedPlayerSlug
+			});
+			selectedPlayerSlug = '';
+			await refreshAll();
+		} catch {
+			rosterError = 'Could not add the player to the season roster.';
+		} finally {
+			rosterBusy = false;
+		}
+	}
+
+	async function handleRemoveFromRoster(playerSlug: string): Promise<void> {
+		rosterError = '';
+		rosterBusy = true;
+		try {
+			await seasonClient.removeSeasonRosterEntry({
+				teamSlug: data.teamSlug,
+				seasonSlug: data.seasonSlug,
+				playerSlug
+			});
+			await refreshAll();
+		} catch {
+			rosterError = 'Could not remove the player from the season roster.';
+		} finally {
+			rosterBusy = false;
 		}
 	}
 
@@ -249,9 +299,52 @@
 			{:else}
 				<ul class="item-list" aria-label="Season roster">
 					{#each data.roster as player (player.slug)}
-						<li class="item-row">{player.names[0] ?? player.slug}</li>
+						<li class="item-row">
+							<span>{player.names[0] ?? player.slug}</span>
+							<button
+								class="btn btn-secondary roster-remove"
+								type="button"
+								disabled={rosterBusy}
+								onclick={() => {
+									void handleRemoveFromRoster(player.slug);
+								}}
+							>
+								Remove
+							</button>
+						</li>
 					{/each}
 				</ul>
+			{/if}
+			{#if rosterError !== ''}
+				<p class="form-error" role="alert">{rosterError}</p>
+			{/if}
+			{#if availablePlayers.length === 0}
+				<p class="muted">
+					{#if data.teamPlayers.length === 0}
+						No team players yet. Add players from the team's Players screen.
+					{:else}
+						Every team player is already on this season's roster.
+					{/if}
+				</p>
+			{:else}
+				<form class="roster-form" onsubmit={handleAddToRoster}>
+					<div class="field">
+						<label for="add-season-roster-player">Player to add</label>
+						<select id="add-season-roster-player" bind:value={selectedPlayerSlug}>
+							<option value="">Select a player</option>
+							{#each availablePlayers as player (player.slug)}
+								<option value={player.slug}>{player.names[0] ?? player.slug}</option>
+							{/each}
+						</select>
+					</div>
+					<button
+						class="btn btn-primary"
+						type="submit"
+						disabled={rosterBusy || selectedPlayerSlug === ''}
+					>
+						Add to season roster
+					</button>
+				</form>
 			{/if}
 		</section>
 	{/if}
