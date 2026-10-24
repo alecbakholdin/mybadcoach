@@ -172,13 +172,10 @@ test('clears season dates when the edit fields are emptied', async ({ page }) =>
 	await registerThroughUi(page, 'Casey Coach', 'casey@example.com');
 	await createTeamThroughUi(page, 'Fleet Foxes');
 
-	await page.getByRole('button', { name: 'New season' }).click();
-	await page.getByLabel('Season name', { exact: true }).fill('Spring 2026');
-	await page.getByLabel('Start date', { exact: true }).fill('2026-01-15');
-	await page.getByLabel('End date', { exact: true }).fill('2026-03-01');
-	await page.getByRole('button', { name: 'Create season', exact: true }).click();
-
-	await expect(page.getByRole('heading', { name: 'Spring 2026', level: 1 })).toBeVisible();
+	await createSeasonThroughUi(page, 'Spring 2026', {
+		startDate: '2026-01-15',
+		endDate: '2026-03-01',
+	});
 	await page.getByRole('tab', { name: 'Settings' }).click();
 
 	await expect(page.getByLabel('Start date', { exact: true })).toHaveValue('2026-01-15');
@@ -199,4 +196,36 @@ test('shows the season not-found state for a stale link', async ({ page }) => {
 	await page.goto('/teams/fleet-foxes/seasons/spring-2026');
 
 	await expect(page.getByRole('heading', { name: 'Season not found' })).toBeVisible();
+});
+
+test.describe('mobile drawer', () => {
+	test.use({ viewport: { width: 390, height: 844 } });
+
+	test('opens the navigation drawer and closes it on navigation', async ({ page, playwright }) => {
+		const api = await connectContext(playwright);
+		try {
+			const registered = await api.post(`/${AUTH}/Register`, {
+				data: { email: 'casey@example.com', password: PASSWORD, name: 'Casey Coach' },
+			});
+			expect(registered.ok()).toBe(true);
+
+			const created = await api.post(`/${TEAMS}/CreateTeam`, { data: { name: 'Fleet Foxes' } });
+			expect(created.ok()).toBe(true);
+		} finally {
+			await api.dispose();
+		}
+
+		await loginThroughUi(page, 'casey@example.com');
+
+		const toggle = page.getByRole('button', { name: 'Open navigation' });
+		await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+		await toggle.click();
+		await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+
+		// Choosing a team from the drawer navigates and closes it.
+		await page.getByRole('link', { name: 'Fleet Foxes' }).click();
+		await expect(page).toHaveURL(/\/teams\/fleet-foxes$/);
+		await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+	});
 });

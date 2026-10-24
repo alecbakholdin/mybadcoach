@@ -628,6 +628,7 @@ body {
 	text-transform: uppercase;
 }
 .season-row {
+	position: relative;
 	display: flex;
 	align-items: center;
 	gap: 9px;
@@ -649,6 +650,16 @@ body {
 .season-row.is-active {
 	background: var(--surface-raised);
 	color: var(--ink);
+}
+.season-row.is-active::before {
+	content: '';
+	position: absolute;
+	top: 11px;
+	bottom: 11px;
+	left: 0;
+	width: 2px;
+	border-radius: 2px;
+	background: var(--primary);
 }
 .season-glyph {
 	flex: none;

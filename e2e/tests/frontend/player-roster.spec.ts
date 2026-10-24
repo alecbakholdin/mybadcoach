@@ -224,3 +224,63 @@ test('lets a non-owner member manage rosters but not delete players', async ({
 	await eventRoster.getByRole('button', { name: 'Remove', exact: true }).click();
 	await expect(page.getByText("No players on this event's roster yet.")).toBeVisible();
 });
+
+/** Seeds a team, season, and three un-rostered players via the Connect boundary. */
+async function seedPlayers(playwright: PlaywrightWorkerArgs['playwright']): Promise<void> {
+	const api = await connectContext(playwright);
+	try {
+		const registered = await api.post(`/${AUTH}/Register`, {
+			data: { email: 'casey@example.com', password: PASSWORD, name: 'Casey Coach' },
+		});
+		expect(registered.ok()).toBe(true);
+
+		const created = await api.post(`/${TEAMS}/CreateTeam`, { data: { name: 'Fleet Foxes' } });
+		expect(created.ok()).toBe(true);
+		const teamSlug = ((await created.json()) as { team?: { slug?: string } }).team?.slug ?? '';
+		expect(teamSlug).toBe('fleet-foxes');
+
+		const season = await api.post(`/${SEASONS}/CreateSeason`, {
+			data: { teamSlug, name: 'Spring 2026' },
+		});
+		expect(season.ok()).toBe(true);
+
+		for (const name of ['Ada Lovelace', 'Maya Singh', 'Reed Johnson']) {
+			const player = await api.post(`/${PLAYERS}/CreatePlayer`, {
+				data: { teamSlug, names: [name] },
+			});
+			expect(player.ok()).toBe(true);
+		}
+	} finally {
+		await api.dispose();
+	}
+}
+
+test('sorts the roster, renders placeholder stats, and multi-adds players', async ({
+	page,
+	playwright,
+}) => {
+	await seedPlayers(playwright);
+	await loginThroughUi(page, 'casey@example.com');
+	await page.goto('/teams/fleet-foxes/seasons/spring-2026');
+	await page.getByRole('tab', { name: 'Roster' }).click();
+
+	// Multi-add two players in one action.
+	await page.getByLabel('Search team players', { exact: true }).fill('a');
+	await page.getByRole('option', { name: 'Ada Lovelace' }).click();
+	await page.getByRole('option', { name: 'Maya Singh' }).click();
+	await page.getByRole('button', { name: 'Add 2 players' }).click();
+
+	const table = page.locator('.stats-table');
+	await expect(table.getByText('Ada Lovelace', { exact: true })).toBeVisible();
+	await expect(table.getByText('Maya Singh', { exact: true })).toBeVisible();
+	// Placeholder stats render as em-dashes.
+	await expect(table.locator('td.col-num').first()).toContainText('—');
+
+	// Sorting by name flips the row order between ascending and descending. The
+	// table starts name-ascending, so the first click toggles to descending.
+	const playerHeader = page.getByRole('button', { name: 'Player', exact: true });
+	await playerHeader.click();
+	await expect(table.locator('tbody tr').first()).toContainText('Maya Singh');
+	await playerHeader.click();
+	await expect(table.locator('tbody tr').first()).toContainText('Ada Lovelace');
+});

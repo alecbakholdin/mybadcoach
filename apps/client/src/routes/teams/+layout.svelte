@@ -5,6 +5,7 @@
 	import { resolve } from '$app/paths';
 
 	import { seasons as seasonClient, teams } from '#lib/api';
+	import { dateRange } from '#lib/dates';
 	import { formErrorOf } from '#lib/forms';
 	import Icon from '#lib/Icon.svelte';
 	import RoleBadge from '#lib/RoleBadge.svelte';
@@ -37,14 +38,6 @@
 		data.memberships.find((entry) => entry.team?.slug === data.activeTeamSlug)?.team?.name ?? '',
 	);
 	const mobileTitle = $derived(activeTeamName === '' ? 'Teams' : activeTeamName);
-
-	/** Joins a season's non-empty dates with an en dash, or returns ''. */
-	function seasonRange(start: string, end: string): string {
-		if (start !== '' && end !== '') {
-			return `${start} – ${end}`;
-		}
-		return start !== '' ? start : end;
-	}
 
 	function openRail(): void {
 		railOpen = true;
@@ -143,7 +136,7 @@
 <div class="structure-shell" class:rail-open={railOpen}>
 	<div class="scrim" aria-hidden="true" onclick={closeRail}></div>
 
-	<aside class="rail" aria-label="Team navigation">
+	<aside class="rail" id="team-navigation" aria-label="Team navigation">
 		<div class="rail-inner">
 			<button
 				class="icon-btn rail-close"
@@ -168,6 +161,7 @@
 								class:is-active={isActiveTeam(membership.team.slug)}
 								href={resolve('/teams/[team_slug]', { team_slug: membership.team.slug })}
 								aria-current={isActiveTeam(membership.team.slug) ? 'true' : undefined}
+								onclick={closeRail}
 							>
 								<Icon name="team" class="team-glyph" />
 								<span class="team-name">{membership.team.name}</span>
@@ -187,13 +181,14 @@
 													season_slug: season.slug,
 												})}
 												aria-current={isActiveSeason(season.slug) ? 'page' : undefined}
+												onclick={closeRail}
 											>
 												<Icon name="calendar" class="season-glyph" />
 												<span class="season-text">
 													<span class="season-name">{season.name}</span>
-													{#if seasonRange(season.startDate, season.endDate) !== ''}
+													{#if dateRange(season.startDate, season.endDate) !== ''}
 														<span class="season-dates">
-															{seasonRange(season.startDate, season.endDate)}
+															{dateRange(season.startDate, season.endDate)}
 														</span>
 													{/if}
 												</span>

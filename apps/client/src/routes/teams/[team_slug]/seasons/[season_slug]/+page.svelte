@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 
 	import { events as eventClient, seasons as seasonClient } from '#lib/api';
+	import { dateRange } from '#lib/dates';
 	import { formErrorOf } from '#lib/forms';
 	import Icon from '#lib/Icon.svelte';
 	import { displayName } from '#lib/players';
@@ -33,7 +34,7 @@
 	let removingSelected = $state(false);
 
 	let searchQuery = $state('');
-	let pickedSlugs = $state<string[]>([]);
+	let playersToAdd = $state<string[]>([]);
 	let addError = $state('');
 	let addingPlayers = $state(false);
 
@@ -45,7 +46,7 @@
 	);
 
 	const pickedPlayers = $derived(
-		pickedSlugs.flatMap((slug) => {
+		playersToAdd.flatMap((slug) => {
 			const player = data.teamPlayers.find((entry) => entry.slug === slug);
 			return player === undefined ? [] : [player];
 		}),
@@ -58,7 +59,7 @@
 		}
 		return availablePlayers.filter(
 			(player) =>
-				!pickedSlugs.includes(player.slug) && displayName(player).toLowerCase().includes(query),
+				!playersToAdd.includes(player.slug) && displayName(player).toLowerCase().includes(query),
 		);
 	});
 
@@ -69,13 +70,6 @@
 			dates = dates === '' ? event.endDate : `${dates} – ${event.endDate}`;
 		}
 		return [dates, event.location].filter((part) => part !== '').join(' · ');
-	}
-
-	function seasonRange(start: string, end: string): string {
-		if (start !== '' && end !== '') {
-			return `${start} – ${end}`;
-		}
-		return start !== '' ? start : end;
 	}
 
 	async function handleCreateEvent(submit: SubmitEvent): Promise<void> {
@@ -108,28 +102,28 @@
 	}
 
 	function pickPlayer(slug: string): void {
-		pickedSlugs = [...new Set([...pickedSlugs, slug])];
+		playersToAdd = [...new Set([...playersToAdd, slug])];
 	}
 
 	function unpickPlayer(slug: string): void {
-		pickedSlugs = pickedSlugs.filter((entry) => entry !== slug);
+		playersToAdd = playersToAdd.filter((entry) => entry !== slug);
 	}
 
 	async function handleAddPlayers(): Promise<void> {
-		if (pickedSlugs.length === 0) {
+		if (playersToAdd.length === 0) {
 			return;
 		}
 		addError = '';
 		addingPlayers = true;
 		try {
-			for (const slug of pickedSlugs) {
+			for (const slug of playersToAdd) {
 				await seasonClient.addSeasonRosterEntry({
 					teamSlug: data.teamSlug,
 					seasonSlug: data.seasonSlug,
 					playerSlug: slug,
 				});
 			}
-			pickedSlugs = [];
+			playersToAdd = [];
 			searchQuery = '';
 			await refreshAll();
 		} catch {
@@ -186,11 +180,11 @@
 				<h1>{data.season.name}</h1>
 				<RoleBadge role={data.role} />
 			</div>
-			{#if seasonRange(data.season.startDate, data.season.endDate) !== ''}
+			{#if dateRange(data.season.startDate, data.season.endDate) !== ''}
 				<div class="head-sub">
 					<span class="summary">
 						<Icon name="calendar" />
-						{seasonRange(data.season.startDate, data.season.endDate)}
+						{dateRange(data.season.startDate, data.season.endDate)}
 					</span>
 				</div>
 			{/if}
@@ -425,12 +419,12 @@
 									<button
 										class="btn btn-primary"
 										type="button"
-										disabled={pickedSlugs.length === 0 || addingPlayers}
+										disabled={playersToAdd.length === 0 || addingPlayers}
 										onclick={handleAddPlayers}
 									>
 										{addingPlayers
 											? 'Adding…'
-											: `Add ${pickedSlugs.length} ${pickedSlugs.length === 1 ? 'player' : 'players'}`}
+											: `Add ${playersToAdd.length} ${playersToAdd.length === 1 ? 'player' : 'players'}`}
 									</button>
 								</div>
 							</div>

@@ -59,9 +59,19 @@ export async function createTeamThroughUi(page: Page, name: string): Promise<voi
 }
 
 /** Creates a season from the active team's "+ New season" affordance and lands on its detail screen. */
-export async function createSeasonThroughUi(page: Page, name: string): Promise<void> {
+export async function createSeasonThroughUi(
+	page: Page,
+	name: string,
+	dates?: { startDate?: string; endDate?: string },
+): Promise<void> {
 	await page.getByRole('button', { name: 'New season' }).click();
 	await page.getByLabel('Season name', { exact: true }).fill(name);
+	if (dates?.startDate !== undefined) {
+		await page.getByLabel('Start date', { exact: true }).fill(dates.startDate);
+	}
+	if (dates?.endDate !== undefined) {
+		await page.getByLabel('End date', { exact: true }).fill(dates.endDate);
+	}
 	await page.getByRole('button', { name: 'Create season', exact: true }).click();
 	await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
 }
