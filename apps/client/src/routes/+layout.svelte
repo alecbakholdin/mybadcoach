@@ -25,17 +25,21 @@
 	<title>My Bad, Coach</title>
 </svelte:head>
 
-<header class="app-mast">
-	<a class="brand" href={resolve('/')}>My Bad, Coach</a>
-	<div class="mast-actions">
-		{#if session.currentUser}
-			<span class="who">{session.currentUser.name}</span>
-			<button class="btn btn-secondary" type="button" onclick={handleLogout}>Log out</button>
-		{/if}
-		<button class="theme-toggle" type="button" aria-label={toggleLabel} onclick={theme.toggle}>
-			{theme.current === 'dark' ? 'Light' : 'Dark'}
-		</button>
-	</div>
-</header>
+<div class="app-shell">
+	<header class="app-mast">
+		<a class="brand" href={resolve('/')}>My Bad, Coach</a>
+		<div class="mast-actions">
+			{#if session.currentUser}
+				<span class="who">{session.currentUser.name}</span>
+				<button class="btn btn-secondary" type="button" onclick={handleLogout}>Log out</button>
+			{/if}
+			<button class="theme-toggle" type="button" aria-label={toggleLabel} onclick={theme.toggle}>
+				{theme.current === 'dark' ? 'Light' : 'Dark'}
+			</button>
+		</div>
+	</header>
 
-{@render children()}
+	<div class="app-body">
+		{@render children()}
+	</div>
+</div>
