@@ -82,11 +82,7 @@ interface StatsResponse {
 	}>;
 }
 
-async function call<T>(
-	api: APIRequestContext,
-	procedure: string,
-	body: unknown
-): Promise<T> {
+async function call<T>(api: APIRequestContext, procedure: string, body: unknown): Promise<T> {
 	const response = await api.post(`/${procedure}`, { data: body });
 	const text = await response.text();
 	if (!response.ok()) {
@@ -102,36 +98,42 @@ async function sessionCookieValue(api: APIRequestContext): Promise<string | unde
 
 test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and stats', async ({
 	page,
-	playwright
+	playwright,
 }) => {
 	const api = await playwright.request.newContext({
 		baseURL: SERVER_URL,
 		extraHTTPHeaders: {
 			// Every mutating Connect procedure is CSRF-gated on this header.
-			'X-Requested-With': 'XMLHttpRequest'
-		}
+			'X-Requested-With': 'XMLHttpRequest',
+		},
 	});
 
 	try {
 		// Wait for the compose stack even when `docker compose run` starts the
 		// dependencies without waiting for their health checks.
 		await expect
-			.poll(async () => {
-				try {
-					return (await api.get('/')).status();
-				} catch {
-					return 0;
-				}
-			}, { timeout: 30_000 })
+			.poll(
+				async () => {
+					try {
+						return (await api.get('/')).status();
+					} catch {
+						return 0;
+					}
+				},
+				{ timeout: 30_000 },
+			)
 			.toBeGreaterThan(0);
 		await expect
-			.poll(async () => {
-				try {
-					return (await api.get(CLIENT_URL)).status();
-				} catch {
-					return 0;
-				}
-			}, { timeout: 30_000 })
+			.poll(
+				async () => {
+					try {
+						return (await api.get(CLIENT_URL)).status();
+					} catch {
+						return 0;
+					}
+				},
+				{ timeout: 30_000 },
+			)
 			.toBe(200);
 
 		const email = `smoke-${Date.now()}-${Math.random().toString(36).slice(2)}@mybadcoach.dev`;
@@ -141,7 +143,7 @@ test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and s
 		const registered = await call<UserResponse>(api, `${AUTH}/Register`, {
 			email,
 			password,
-			name: 'Smoke Tester'
+			name: 'Smoke Tester',
 		});
 		expect(registered.user.email).toBe(email);
 		expect(await sessionCookieValue(api)).toBeTruthy();
@@ -152,20 +154,20 @@ test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and s
 		expect(await sessionCookieValue(api)).toBeTruthy();
 
 		const { team } = await call<TeamResponse>(api, `${TEAMS}/CreateTeam`, {
-			name: `Smoke Team ${Date.now()}`
+			name: `Smoke Team ${Date.now()}`,
 		});
 		expect(team.slug).toBeTruthy();
 
 		const { season } = await call<SeasonResponse>(api, `${SEASONS}/CreateSeason`, {
 			teamSlug: team.slug,
-			name: 'Spring Season'
+			name: 'Spring Season',
 		});
 		expect(season.slug).toBeTruthy();
 
 		const { event } = await call<EventResponse>(api, `${EVENTS}/CreateEvent`, {
 			teamSlug: team.slug,
 			seasonSlug: season.slug,
-			name: 'Season Opener'
+			name: 'Season Opener',
 		});
 		expect(event.slug).toBeTruthy();
 
@@ -173,17 +175,17 @@ test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and s
 			teamSlug: team.slug,
 			seasonSlug: season.slug,
 			eventSlug: event.slug,
-			opponentName: 'Rival Club'
+			opponentName: 'Rival Club',
 		});
 		expect(match.slug).toBeTruthy();
 
 		const { player: handler } = await call<PlayerResponse>(api, `${PLAYERS}/CreatePlayer`, {
 			teamSlug: team.slug,
-			names: ['Alex Handler']
+			names: ['Alex Handler'],
 		});
 		const { player: cutter } = await call<PlayerResponse>(api, `${PLAYERS}/CreatePlayer`, {
 			teamSlug: team.slug,
-			names: ['Sam Cutter']
+			names: ['Sam Cutter'],
 		});
 
 		// Add the handler to the season roster; the returned player is the
@@ -191,7 +193,7 @@ test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and s
 		const rosterEntry = await call<PlayerResponse>(api, `${SEASONS}/AddSeasonRosterEntry`, {
 			teamSlug: team.slug,
 			seasonSlug: season.slug,
-			playerSlug: handler.slug
+			playerSlug: handler.slug,
 		});
 		expect(rosterEntry.player.id).toBe(handler.id);
 
@@ -209,30 +211,30 @@ test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and s
 					pointNumber: 1,
 					effectiveTs: 1_000,
 					type: `${enumPrefix}SET_LINEUP`,
-					setLineup: { playerIds: [handler.id, cutter.id] }
+					setLineup: { playerIds: [handler.id, cutter.id] },
 				},
 				{
 					id: eventId('touch-handler'),
 					pointNumber: 1,
 					effectiveTs: 2_000,
 					type: `${enumPrefix}TOUCH`,
-					touch: { playerId: handler.id }
+					touch: { playerId: handler.id },
 				},
 				{
 					id: eventId('touch-cutter'),
 					pointNumber: 1,
 					effectiveTs: 3_000,
 					type: `${enumPrefix}TOUCH`,
-					touch: { playerId: cutter.id }
+					touch: { playerId: cutter.id },
 				},
 				{
 					id: eventId('score'),
 					pointNumber: 1,
 					effectiveTs: 4_000,
 					type: `${enumPrefix}SCORE`,
-					score: { playerId: cutter.id, assistPlayerId: handler.id }
-				}
-			]
+					score: { playerId: cutter.id, assistPlayerId: handler.id },
+				},
+			],
 		});
 		expect(appended.acceptedIds).toHaveLength(4);
 		expect(appended.skippedDuplicateIds ?? []).toHaveLength(0);
@@ -242,14 +244,14 @@ test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and s
 			teamSlug: team.slug,
 			seasonSlug: season.slug,
 			eventSlug: event.slug,
-			matchSlug: match.slug
+			matchSlug: match.slug,
 		});
 		expect(listed.total).toBe('4');
 		expect(listed.events.map((stored) => stored.id)).toEqual([
 			eventId('lineup'),
 			eventId('touch-handler'),
 			eventId('touch-cutter'),
-			eventId('score')
+			eventId('score'),
 		]);
 		expect(listed.events.at(-1)?.type).toBe(`${enumPrefix}SCORE`);
 
@@ -258,7 +260,7 @@ test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and s
 			teamSlug: team.slug,
 			seasonSlug: season.slug,
 			eventSlug: event.slug,
-			matchSlug: match.slug
+			matchSlug: match.slug,
 		});
 		expect(state.points).toHaveLength(1);
 		const point = state.points[0];
@@ -269,11 +271,11 @@ test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and s
 		expect(point.state.playerStats[handler.id]).toMatchObject({
 			touches: '1',
 			completions: '1',
-			assists: '1'
+			assists: '1',
 		});
 		expect(point.state.playerStats[cutter.id]).toMatchObject({
 			touches: '1',
-			goals: '1'
+			goals: '1',
 		});
 
 		// Aggregated stats are derived from the same folded points.
@@ -281,7 +283,7 @@ test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and s
 			teamSlug: team.slug,
 			seasonSlug: season.slug,
 			eventSlug: event.slug,
-			matchSlug: match.slug
+			matchSlug: match.slug,
 		});
 		expect(stats.playerStats.length).toBeGreaterThanOrEqual(2);
 		const handlerStats = stats.playerStats.find((entry) => entry.playerId === handler.id);
@@ -294,7 +296,7 @@ test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and s
 		// The real SvelteKit client builds and serves alongside the server.
 		const response = await page.goto(CLIENT_URL);
 		expect(response?.status()).toBe(200);
-		await expect(page.locator('body')).toContainText('Initial view:');
+		await expect(page.getByRole('heading', { name: 'My Bad, Coach' })).toBeVisible();
 	} finally {
 		await api.dispose();
 	}

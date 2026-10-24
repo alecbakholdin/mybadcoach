@@ -3,6 +3,12 @@
 	"include": ["src", "test", "*"],
 	"exclude": ["src/service-worker"],
 	"compilerOptions": {
+		"baseUrl": ".",
+		"paths": {
+			"$shared": ["../../packages/shared/src/index.ts"],
+			"$shared/*": ["../../packages/shared/src/*"],
+			"#lib/*": ["./src/lib/*"]
+		},
 		"allowJs": true,
 		"checkJs": true,
 		"esModuleInterop": true,

@@ -11,6 +11,7 @@ import (
 
 	"github.com/alecbakholdin/mybadcoach/server/internal/auth"
 	"github.com/alecbakholdin/mybadcoach/server/internal/structure"
+	"github.com/alecbakholdin/mybadcoach/server/web"
 
 	"github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/auth/v1/authv1connect"
 	"github.com/alecbakholdin/mybadcoach/server/internal/gen/mybadcoach/events/v1/eventsv1connect"
@@ -77,6 +78,10 @@ func NewHandler(cfg Config) (http.Handler, error) {
 		structure.NewMatchService(cfg.DB, cfg.Now),
 	)
 	mux.Handle(matchPath, matchHandler)
+
+	// Serve the embedded SvelteKit SPA for every path the Connect services
+	// don't claim: "/" is the least-specific pattern, so RPC routes still win.
+	mux.Handle("/", web.Handler())
 
 	middleware := auth.NewMiddleware(auth.MiddlewareConfig{
 		DB:                                cfg.DB,

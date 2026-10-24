@@ -1,0 +1,31 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"printWidth": 100,
+	"useTabs": true,
+	"singleQuote": true,
+	"semi": true,
+	"trailingComma": "all",
+	"sortPackageJson": false,
+	"svelte": true,
+	"ignorePatterns": [
+		"**/node_modules/**",
+		"**/package-lock.json",
+		"**/dist/**",
+		"**/build/**",
+		"**/.svelte-kit/**",
+		"server/web/static/**",
+		"packages/shared/src/gen/**",
+		".claude/**",
+		"docs/**",
+		".scratch/**",
+		"fixtures/**",
+		"proto/**",
+		"server/**",
+		".github/**",
+		".devcontainer/**",
+		"README.md",
+		"LICENSE",
+		"docker-compose.yml",
+		".golangci.yml"
+	]
+}

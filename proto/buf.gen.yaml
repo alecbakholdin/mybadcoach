@@ -13,4 +13,7 @@ plugins:
     opt: paths=source_relative
   - remote: buf.build/bufbuild/es:v2.16.0
     out: ../packages/shared/src/gen
-    opt: target=ts
+    # Explicit .ts extensions and erasable syntax (enums as const objects) keep
+    # the generated modules valid Node ESM that native type stripping can load
+    # without a transform step (the frontend-only stub server).
+    opt: target=ts,import_extension=.ts,erasable_syntax=true

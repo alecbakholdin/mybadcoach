@@ -1,27 +1,27 @@
 {
-  "name": "@mybadcoach/shared",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "description": "Dependency-free shared domain types, MatchEvent schema, and pure point reducer",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
-    }
-  },
-  "scripts": {
-    "test": "tsc --noEmit && vitest run",
-    "typecheck": "tsc --noEmit"
-  },
-  "devDependencies": {
-    "@types/node": "^26.6.5",
-    "typescript": "^7.0.2",
-    "vitest": "^5.0.5"
-  },
-  "dependencies": {
-    "@bufbuild/protobuf": "2.16.0"
-  }
+	"name": "@mybadcoach/shared",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Dependency-free shared domain types, MatchEvent schema, and pure point reducer",
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"default": "./src/index.ts"
+		}
+	},
+	"scripts": {
+		"test": "tsc --noEmit && vitest run",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.5",
+		"typescript": "^7.0.2",
+		"vitest": "^5.0.5"
+	},
+	"dependencies": {
+		"@bufbuild/protobuf": "2.16.0"
+	}
 }

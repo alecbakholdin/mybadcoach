@@ -1,13 +1,13 @@
 {
-  "name": "@mybadcoach/e2e",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "description": "Full-stack Playwright smoke for the My Bad, Coach container stack",
-  "scripts": {
-    "test": "playwright test"
-  },
-  "devDependencies": {
-    "@playwright/test": "1.64.1"
-  }
+	"name": "@mybadcoach/e2e",
+	"version": "0.0.0",
+	"private": true,
+	"type": "module",
+	"description": "Full-stack Playwright smoke for the My Bad, Coach container stack",
+	"scripts": {
+		"test": "playwright test"
+	},
+	"devDependencies": {
+		"@playwright/test": "1.64.1"
+	}
 }

@@ -12,24 +12,26 @@ import type { MatchEvent } from './gen/mybadcoach/matches/v1/matches_pb';
  * the comparison is on bigint values.
  */
 export function prepareEvents(events: readonly MatchEvent[]): MatchEvent[] {
-  const sorted = events.filter((event) => !event.deleted).sort((a, b) => {
-    if (a.effectiveTs !== b.effectiveTs) {
-      return a.effectiveTs < b.effectiveTs ? -1 : 1;
-    }
-    // Deterministic tie-break so both language ports agree regardless of
-    // input order.
-    return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
-  });
+	const sorted = events
+		.filter((event) => !event.deleted)
+		.sort((a, b) => {
+			if (a.effectiveTs !== b.effectiveTs) {
+				return a.effectiveTs < b.effectiveTs ? -1 : 1;
+			}
+			// Deterministic tie-break so both language ports agree regardless of
+			// input order.
+			return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
+		});
 
-  const seen = new Set<string>();
-  const prepared: MatchEvent[] = [];
-  for (const event of sorted) {
-    if (seen.has(event.id)) {
-      continue;
-    }
-    seen.add(event.id);
-    prepared.push(event);
-  }
+	const seen = new Set<string>();
+	const prepared: MatchEvent[] = [];
+	for (const event of sorted) {
+		if (seen.has(event.id)) {
+			continue;
+		}
+		seen.add(event.id);
+		prepared.push(event);
+	}
 
-  return prepared;
+	return prepared;
 }
