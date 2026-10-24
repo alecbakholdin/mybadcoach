@@ -64,6 +64,11 @@ Playwright CRUD e2e) so nothing ships untested.
   `/teams/[team_slug]/seasons/[season_slug]` (edit + owner-gated delete + read-only roster). Route
   loaders await `session.load()` and short-circuit to empty data when signed out. The stub gained
   TeamService + SeasonService over an in-memory store with owner gating + slug generation.
+- [Build the event + match CRUD screens](issues/07-event-match-crud.md): season detail gained an
+  Events section (`ListEvents` + create), `…/seasons/[season_slug]/events/[event_slug]` (edit +
+  member-gated delete + matches + create), and `…/events/[event_slug]/matches/[match_slug]` (edit +
+  member-gated delete). The stub gained EventService + MatchService (parent-scoped slugs, cascading
+  hard deletes); roster + gameplay RPCs still answer `unimplemented` for ticket 08.
 
 ## Not yet specified
 
