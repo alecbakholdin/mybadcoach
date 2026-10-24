@@ -46,6 +46,13 @@ Playwright CRUD e2e) so nothing ships untested.
   CDN); `+layout.svelte` + `src/lib/theme.svelte.ts` (rune) wire `data-theme` light/dark switching with
   a no-flash pre-paint script; `server/web` adds immutable cache headers for `_app/immutable/` and
   `fonts/`.
+- [Stand up the minimal frontend testing seam](issues/04-testing-seam.md): strict flat ESLint at the
+  repo root (`typescript-eslint` strict-type-checked + svelte + playwright + import-x, recorded in
+  `docs/dependencies.md`) wired into `npm run lint`; a `@connectrpc/connect-node` stub server in
+  `apps/client/test-server/` (native Node type-stripping, in-memory fake store, full AuthService)
+  reachable same-origin via the Vite preview proxy; a Playwright frontend smoke in `e2e/`
+  (`npm run test:integration:frontend`). Codegen note: `proto/buf.gen.yaml` now emits
+  `import_extension=.ts,erasable_syntax=true` so the generated `_pb.ts` runs under Node's native TS.
 
 ## Not yet specified
 
