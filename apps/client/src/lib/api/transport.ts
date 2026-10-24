@@ -53,11 +53,11 @@ const interceptors: Interceptor[] = [
 			}
 			throw error;
 		}
-	}
+	},
 ];
 
 export const transport = createConnectTransport({
 	baseUrl: '/',
 	interceptors,
-	fetch: (input, init) => globalThis.fetch(input, { ...init, credentials: 'include' })
+	fetch: (input, init) => globalThis.fetch(input, { ...init, credentials: 'include' }),
 });

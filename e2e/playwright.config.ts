@@ -14,6 +14,6 @@ export default defineConfig({
 	timeout: 60_000,
 	reporter: [['list']],
 	use: {
-		trace: 'retain-on-failure'
-	}
+		trace: 'retain-on-failure',
+	},
 });

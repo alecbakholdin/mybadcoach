@@ -108,5 +108,5 @@ export const session = {
 	load: loadSession,
 	setUser,
 	clear,
-	logout
+	logout,
 };

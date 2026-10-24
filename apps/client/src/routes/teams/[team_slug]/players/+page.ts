@@ -5,7 +5,7 @@ import { teamRoleOf, type PlayerListData } from '#lib/structure-data';
 // Players are scoped to a team; the membership role gates owner-only deletion
 // in the UI, while any member may create and edit players.
 export const load = async ({
-	params
+	params,
 }: {
 	params: { team_slug: string };
 }): Promise<PlayerListData> => {
@@ -15,7 +15,7 @@ export const load = async ({
 		teamName: '',
 		role: 'member',
 		players: [],
-		playersTotal: 0
+		playersTotal: 0,
 	});
 	if ((await session.load()) === null) {
 		return empty();
@@ -32,6 +32,6 @@ export const load = async ({
 		teamName: membership.team.name,
 		role: teamRoleOf(membership.role),
 		players: response.players,
-		playersTotal: Number(response.total)
+		playersTotal: Number(response.total),
 	};
 };

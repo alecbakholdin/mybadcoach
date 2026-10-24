@@ -2,7 +2,7 @@ import {
 	expect,
 	type APIRequestContext,
 	type Page,
-	type PlaywrightWorkerArgs
+	type PlaywrightWorkerArgs,
 } from '@playwright/test';
 
 // Shared steps for the frontend-only seam. The real SvelteKit build runs
@@ -14,7 +14,7 @@ const CSRF = { 'X-Requested-With': 'XMLHttpRequest' };
 
 /** Opens a request context against the stub Connect server. */
 export async function connectContext(
-	playwright: PlaywrightWorkerArgs['playwright']
+	playwright: PlaywrightWorkerArgs['playwright'],
 ): Promise<APIRequestContext> {
 	return playwright.request.newContext({ baseURL: STUB_URL, extraHTTPHeaders: CSRF });
 }
@@ -28,7 +28,7 @@ export async function registerThroughUi(
 	page: Page,
 	name: string,
 	email: string,
-	expectSuccess = true
+	expectSuccess = true,
 ): Promise<void> {
 	await page.goto('/register');
 	await page.getByLabel('Name', { exact: true }).fill(name);

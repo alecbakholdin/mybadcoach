@@ -3,7 +3,7 @@ import {
 	matches as matchClient,
 	players as playerClient,
 	seasons as seasonClient,
-	teams
+	teams,
 } from '#lib/api';
 import { undefinedIfNotFound } from '#lib/api/errors';
 import { session } from '#lib/session.svelte';
@@ -15,15 +15,11 @@ import { teamRoleOf, type EventDetailData } from '#lib/structure-data';
 // undefined so the screen renders its own not-found state instead of an error
 // page.
 export const load = async ({
-	params
+	params,
 }: {
 	params: { team_slug: string; season_slug: string; event_slug: string };
 }): Promise<EventDetailData> => {
-	const {
-		team_slug: teamSlug,
-		season_slug: seasonSlug,
-		event_slug: eventSlug
-	} = params;
+	const { team_slug: teamSlug, season_slug: seasonSlug, event_slug: eventSlug } = params;
 	const empty = (): EventDetailData => ({
 		teamSlug,
 		seasonSlug,
@@ -36,7 +32,7 @@ export const load = async ({
 		matchesTotal: 0,
 		roster: [],
 		rosterTotal: 0,
-		teamPlayers: []
+		teamPlayers: [],
 	});
 	if ((await session.load()) === null) {
 		return empty();
@@ -52,12 +48,12 @@ export const load = async ({
 			undefinedIfNotFound(seasonClient.getSeason({ teamSlug, seasonSlug })),
 			undefinedIfNotFound(eventClient.getEvent({ teamSlug, seasonSlug, eventSlug })),
 			undefinedIfNotFound(
-				matchClient.listMatches({ teamSlug, seasonSlug, eventSlug, offset: 0, limit: 100 })
+				matchClient.listMatches({ teamSlug, seasonSlug, eventSlug, offset: 0, limit: 100 }),
 			),
 			undefinedIfNotFound(
-				eventClient.listEventRoster({ teamSlug, seasonSlug, eventSlug, offset: 0, limit: 100 })
+				eventClient.listEventRoster({ teamSlug, seasonSlug, eventSlug, offset: 0, limit: 100 }),
 			),
-			playerClient.listPlayers({ teamSlug, offset: 0, limit: 100 })
+			playerClient.listPlayers({ teamSlug, offset: 0, limit: 100 }),
 		]);
 	return {
 		teamSlug,
@@ -71,6 +67,6 @@ export const load = async ({
 		matchesTotal: Number(matchResponse?.total ?? 0n),
 		roster: rosterResponse?.players ?? [],
 		rosterTotal: Number(rosterResponse?.total ?? 0n),
-		teamPlayers: playerResponse.players
+		teamPlayers: playerResponse.players,
 	};
 };

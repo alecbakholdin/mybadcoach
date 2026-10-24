@@ -39,7 +39,7 @@ import {
 	createMatchImplementation,
 	createPlayerImplementation,
 	createSeasonImplementation,
-	createTeamImplementation
+	createTeamImplementation,
 } from './structure.ts';
 import { AuthService } from '../../../packages/shared/src/gen/mybadcoach/auth/v1/auth_pb.ts';
 import { EventService } from '../../../packages/shared/src/gen/mybadcoach/events/v1/events_pb.ts';
@@ -80,7 +80,7 @@ const MUTATING_PROCEDURES = new Set([
 	'/mybadcoach.matches.v1.MatchService/DeleteMatch',
 	'/mybadcoach.players.v1.PlayerService/CreatePlayer',
 	'/mybadcoach.players.v1.PlayerService/UpdatePlayer',
-	'/mybadcoach.players.v1.PlayerService/DeletePlayer'
+	'/mybadcoach.players.v1.PlayerService/DeletePlayer',
 ]);
 
 const ALLOWED_HEADERS = [...cors.allowedHeaders, CSRF_HEADER].join(', ');
@@ -97,18 +97,14 @@ const connectHandler = connectNodeAdapter({
 		router.service(EventService, createEventImplementation(store));
 		router.service(MatchService, createMatchImplementation(store));
 		router.service(PlayerService, createPlayerImplementation(store));
-	}
+	},
 });
 
 function requestPath(request: IncomingMessage): string {
 	return new URL(request.url ?? '/', 'http://stub.invalid').pathname;
 }
 
-function writeJson(
-	response: ServerResponse,
-	status: number,
-	body: Record<string, unknown>
-): void {
+function writeJson(response: ServerResponse, status: number, body: Record<string, unknown>): void {
 	response.writeHead(status, { 'Content-Type': 'application/json' });
 	response.end(JSON.stringify(body));
 }
@@ -145,8 +141,7 @@ function csrfAllows(request: IncomingMessage): boolean {
 		return true;
 	}
 	const requestedWith = request.headers['x-requested-with'];
-	const hasCsrfHeader =
-		typeof requestedWith === 'string' && requestedWith.length > 0;
+	const hasCsrfHeader = typeof requestedWith === 'string' && requestedWith.length > 0;
 	if (!hasCsrfHeader) {
 		return false;
 	}
@@ -163,10 +158,7 @@ function csrfAllows(request: IncomingMessage): boolean {
 }
 
 /** Handles the two test-only endpoints; returns true when it owns the request. */
-function handleTestRoute(
-	request: IncomingMessage,
-	response: ServerResponse
-): boolean {
+function handleTestRoute(request: IncomingMessage, response: ServerResponse): boolean {
 	const path = requestPath(request);
 	if (path === '/__test/health' && request.method === 'GET') {
 		response.writeHead(200, { 'Content-Type': 'text/plain' });
@@ -192,7 +184,7 @@ const server = createServer((request, response) => {
 	if (!csrfAllows(request)) {
 		writeJson(response, 403, {
 			code: 'permission_denied',
-			message: 'request rejected by CSRF protection'
+			message: 'request rejected by CSRF protection',
 		});
 		return;
 	}

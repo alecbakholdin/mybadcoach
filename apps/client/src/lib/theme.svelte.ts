@@ -12,7 +12,10 @@ export type Theme = 'dark' | 'light';
 export const THEME_STORAGE_KEY = 'mbc-theme';
 
 function readInitial(): Theme {
-	if (typeof document !== 'undefined' && document.documentElement.getAttribute('data-theme') === 'light') {
+	if (
+		typeof document !== 'undefined' &&
+		document.documentElement.getAttribute('data-theme') === 'light'
+	) {
 		return 'light';
 	}
 	return 'dark';
@@ -36,5 +39,5 @@ export const theme = {
 	},
 	toggle: (): void => {
 		apply(current === 'dark' ? 'light' : 'dark');
-	}
+	},
 };

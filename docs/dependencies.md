@@ -23,6 +23,7 @@ Alec on 2026-10-23.
 | `eslint-plugin-import-x` | `4.17.1` | root | Import sorting/grouping (builtins, external, internal aliases, relative). | **approved 2026-10-24** |
 | `globals` | `17.13.0` | root | Browser/Node global sets for the flat config. | **approved 2026-10-24** |
 | `@sveltejs/adapter-static` | `^4.0.0` | `apps/client` (devDependency) | SvelteKit build adapter: emits the client as a static SPA the Go server `go:embed`s and serves. | **approved 2026-10-24** |
+| `oxfmt` | `^0.74.0` | root (devDependency) | Prettier-compatible formatter (`.oxfmtrc.json`: tabs, single quotes) for TS/Svelte/CSS; replaces Prettier. | **approved 2026-10-24** |
 
 The ESLint set is the "standard set" Alec approved on 2026-10-24. `import-x` was chosen
 over the unmaintained `eslint-plugin-import`; module resolution stays with TypeScript/Vite

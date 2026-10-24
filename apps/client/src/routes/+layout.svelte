@@ -12,7 +12,7 @@
 	let { children }: { children: Snippet } = $props();
 
 	const toggleLabel = $derived(
-		theme.current === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'
+		theme.current === 'dark' ? 'Switch to light theme' : 'Switch to dark theme',
 	);
 
 	async function handleLogout(): Promise<void> {

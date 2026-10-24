@@ -56,13 +56,7 @@
 			</div>
 			<div class="field">
 				<label for="register-email">Email</label>
-				<input
-					id="register-email"
-					type="email"
-					autocomplete="email"
-					required
-					bind:value={email}
-				/>
+				<input id="register-email" type="email" autocomplete="email" required bind:value={email} />
 				{#if fieldErrors.email}
 					<p class="field-error">{fieldErrors.email}</p>
 				{/if}

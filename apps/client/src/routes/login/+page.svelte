@@ -47,13 +47,7 @@
 		<form onsubmit={handleSubmit}>
 			<div class="field">
 				<label for="login-email">Email</label>
-				<input
-					id="login-email"
-					type="email"
-					autocomplete="email"
-					required
-					bind:value={email}
-				/>
+				<input id="login-email" type="email" autocomplete="email" required bind:value={email} />
 			</div>
 			<div class="field">
 				<label for="login-password">Password</label>

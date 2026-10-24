@@ -45,7 +45,7 @@
 				matchSlug: data.matchSlug,
 				opponentName: editOpponent,
 				scheduledAt: editScheduledAt,
-				pointCap: parsedPointCap(editPointCap)
+				pointCap: parsedPointCap(editPointCap),
 			});
 			await refreshAll();
 		} catch (error) {
@@ -58,11 +58,7 @@
 	}
 
 	async function handleDelete(): Promise<void> {
-		if (
-			!confirm(
-				`Delete the match against ${data.match?.opponentName ?? 'this opponent'}?`
-			)
-		) {
+		if (!confirm(`Delete the match against ${data.match?.opponentName ?? 'this opponent'}?`)) {
 			return;
 		}
 		deleteError = '';
@@ -72,14 +68,14 @@
 				teamSlug: data.teamSlug,
 				seasonSlug: data.seasonSlug,
 				eventSlug: data.eventSlug,
-				matchSlug: data.matchSlug
+				matchSlug: data.matchSlug,
 			});
 			await goto(
 				resolve('/teams/[team_slug]/seasons/[season_slug]/events/[event_slug]', {
 					team_slug: data.teamSlug,
 					season_slug: data.seasonSlug,
-					event_slug: data.eventSlug
-				})
+					event_slug: data.eventSlug,
+				}),
 			);
 		} catch {
 			deleteError = 'Could not delete the match.';
@@ -99,7 +95,7 @@
 		href={resolve('/teams/[team_slug]/seasons/[season_slug]/events/[event_slug]', {
 			team_slug: data.teamSlug,
 			season_slug: data.seasonSlug,
-			event_slug: data.eventSlug
+			event_slug: data.eventSlug,
 		})}
 	>
 		← {data.eventName || 'Event'}
@@ -128,11 +124,7 @@
 				<div class="date-range">
 					<div class="field">
 						<label for="edit-match-scheduled">Scheduled at</label>
-						<input
-							id="edit-match-scheduled"
-							type="datetime-local"
-							bind:value={editScheduledAt}
-						/>
+						<input id="edit-match-scheduled" type="datetime-local" bind:value={editScheduledAt} />
 					</div>
 					<div class="field">
 						<label for="edit-match-point-cap">Point cap</label>

@@ -34,8 +34,8 @@
 	/** Team players not yet registered on this event's roster. */
 	const availablePlayers = $derived(
 		data.teamPlayers.filter(
-			(player) => !data.roster.some((rostered) => rostered.slug === player.slug)
-		)
+			(player) => !data.roster.some((rostered) => rostered.slug === player.slug),
+		),
 	);
 
 	async function handleAddToRoster(submit: SubmitEvent): Promise<void> {
@@ -50,7 +50,7 @@
 				teamSlug: data.teamSlug,
 				seasonSlug: data.seasonSlug,
 				eventSlug: data.eventSlug,
-				playerSlug: selectedPlayerSlug
+				playerSlug: selectedPlayerSlug,
 			});
 			selectedPlayerSlug = '';
 			await refreshAll();
@@ -69,7 +69,7 @@
 				teamSlug: data.teamSlug,
 				seasonSlug: data.seasonSlug,
 				eventSlug: data.eventSlug,
-				playerSlug
+				playerSlug,
 			});
 			await refreshAll();
 		} catch {
@@ -101,7 +101,7 @@
 				name: editName,
 				startDate: editStart,
 				endDate: editEnd,
-				location: editLocation
+				location: editLocation,
 			});
 			await refreshAll();
 		} catch (error) {
@@ -115,9 +115,7 @@
 
 	async function handleDelete(): Promise<void> {
 		if (
-			!confirm(
-				`Delete ${data.event?.name ?? 'this event'}? This permanently deletes its matches.`
-			)
+			!confirm(`Delete ${data.event?.name ?? 'this event'}? This permanently deletes its matches.`)
 		) {
 			return;
 		}
@@ -127,13 +125,13 @@
 			await eventClient.deleteEvent({
 				teamSlug: data.teamSlug,
 				seasonSlug: data.seasonSlug,
-				eventSlug: data.eventSlug
+				eventSlug: data.eventSlug,
 			});
 			await goto(
 				resolve('/teams/[team_slug]/seasons/[season_slug]', {
 					team_slug: data.teamSlug,
-					season_slug: data.seasonSlug
-				})
+					season_slug: data.seasonSlug,
+				}),
 			);
 		} catch {
 			deleteError = 'Could not delete the event.';
@@ -154,7 +152,7 @@
 				eventSlug: data.eventSlug,
 				opponentName,
 				scheduledAt: scheduledAt === '' ? undefined : scheduledAt,
-				pointCap: parsedPointCap(pointCap)
+				pointCap: parsedPointCap(pointCap),
 			});
 			opponentName = '';
 			scheduledAt = '';
@@ -179,7 +177,7 @@
 		class="back-link"
 		href={resolve('/teams/[team_slug]/seasons/[season_slug]', {
 			team_slug: data.teamSlug,
-			season_slug: data.seasonSlug
+			season_slug: data.seasonSlug,
 		})}
 	>
 		← {data.seasonName || 'Season'}
@@ -251,8 +249,8 @@
 										team_slug: data.teamSlug,
 										season_slug: data.seasonSlug,
 										event_slug: data.eventSlug,
-										match_slug: match.slug
-									}
+										match_slug: match.slug,
+									},
 								)}
 							>
 								{match.opponentName}
@@ -303,8 +301,8 @@
 			<h2>Event roster</h2>
 			<p class="muted">
 				{data.rosterTotal}
-				{data.rosterTotal === 1 ? 'player' : 'players'} on this event's roster. The event
-				roster is independent of the season roster.
+				{data.rosterTotal === 1 ? 'player' : 'players'} on this event's roster. The event roster is independent
+				of the season roster.
 			</p>
 			{#if data.roster.length === 0}
 				<p class="muted">No players on this event's roster yet.</p>

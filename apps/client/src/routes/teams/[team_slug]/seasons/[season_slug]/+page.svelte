@@ -38,8 +38,8 @@
 	/** Team players not yet registered on this season's roster. */
 	const availablePlayers = $derived(
 		data.teamPlayers.filter(
-			(player) => !data.roster.some((rostered) => rostered.slug === player.slug)
-		)
+			(player) => !data.roster.some((rostered) => rostered.slug === player.slug),
+		),
 	);
 
 	/** One-line summary of an event's dates and location, omitting blanks. */
@@ -63,7 +63,7 @@
 				name: eventName,
 				startDate: eventStart === '' ? undefined : eventStart,
 				endDate: eventEnd === '' ? undefined : eventEnd,
-				location: eventLocation === '' ? undefined : eventLocation
+				location: eventLocation === '' ? undefined : eventLocation,
 			});
 			eventName = '';
 			eventStart = '';
@@ -92,7 +92,7 @@
 				// An empty string is present-on-the-wire and clears the column;
 				// `undefined` would mean "leave unchanged".
 				startDate: editStart,
-				endDate: editEnd
+				endDate: editEnd,
 			});
 			await refreshAll();
 		} catch (error) {
@@ -115,7 +115,7 @@
 			await seasonClient.addSeasonRosterEntry({
 				teamSlug: data.teamSlug,
 				seasonSlug: data.seasonSlug,
-				playerSlug: selectedPlayerSlug
+				playerSlug: selectedPlayerSlug,
 			});
 			selectedPlayerSlug = '';
 			await refreshAll();
@@ -133,7 +133,7 @@
 			await seasonClient.removeSeasonRosterEntry({
 				teamSlug: data.teamSlug,
 				seasonSlug: data.seasonSlug,
-				playerSlug
+				playerSlug,
 			});
 			await refreshAll();
 		} catch {
@@ -146,7 +146,7 @@
 	async function handleDelete(): Promise<void> {
 		if (
 			!confirm(
-				`Delete ${data.season?.name ?? 'this season'}? This permanently deletes its events and matches.`
+				`Delete ${data.season?.name ?? 'this season'}? This permanently deletes its events and matches.`,
 			)
 		) {
 			return;
@@ -156,7 +156,7 @@
 		try {
 			await seasonClient.deleteSeason({
 				teamSlug: data.teamSlug,
-				seasonSlug: data.seasonSlug
+				seasonSlug: data.seasonSlug,
 			});
 			await goto(resolve('/teams/[team_slug]', { team_slug: data.teamSlug }));
 		} catch {
@@ -235,14 +235,11 @@
 					{#each data.events as event (event.slug)}
 						<li class="item-row">
 							<a
-								href={resolve(
-									'/teams/[team_slug]/seasons/[season_slug]/events/[event_slug]',
-									{
-										team_slug: data.teamSlug,
-										season_slug: data.seasonSlug,
-										event_slug: event.slug
-									}
-								)}
+								href={resolve('/teams/[team_slug]/seasons/[season_slug]/events/[event_slug]', {
+									team_slug: data.teamSlug,
+									season_slug: data.seasonSlug,
+									event_slug: event.slug,
+								})}
 							>
 								{event.name}
 							</a>

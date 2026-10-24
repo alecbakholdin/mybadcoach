@@ -176,7 +176,7 @@ export class FakeStore {
 			id: randomUUID(),
 			email,
 			name,
-			passwordHash: hashPassword(password)
+			passwordHash: hashPassword(password),
 		};
 		this.usersByEmail.set(email, user);
 		this.usersById.set(user.id, user);
@@ -225,7 +225,7 @@ export class FakeStore {
 			id: randomUUID(),
 			slug: uniqueSlug(slugify(name), (candidate) => this.teamsBySlug.has(candidate)),
 			name,
-			memberships: new Map([[ownerId, 'owner']])
+			memberships: new Map([[ownerId, 'owner']]),
 		};
 		this.teamsBySlug.set(team.slug, team);
 		return team;
@@ -289,7 +289,7 @@ export class FakeStore {
 		teamSlug: string,
 		name: string,
 		startDate: string,
-		endDate: string
+		endDate: string,
 	): FakeSeason | undefined {
 		if (!this.teamsBySlug.has(teamSlug)) {
 			return undefined;
@@ -298,11 +298,11 @@ export class FakeStore {
 		const season: FakeSeason = {
 			id: randomUUID(),
 			slug: uniqueSlug(slugify(name), (candidate) =>
-				teamSeasons.some((existing) => existing.slug === candidate)
+				teamSeasons.some((existing) => existing.slug === candidate),
 			),
 			name,
 			startDate,
-			endDate
+			endDate,
 		};
 		teamSeasons.push(season);
 		this.seasonsByTeamSlug.set(teamSlug, teamSeasons);
@@ -327,7 +327,7 @@ export class FakeStore {
 	updateSeason(
 		teamSlug: string,
 		seasonSlug: string,
-		patch: { name?: string; startDate?: string; endDate?: string }
+		patch: { name?: string; startDate?: string; endDate?: string },
 	): FakeSeason | undefined {
 		const season = this.findSeason(teamSlug, seasonSlug);
 		if (season === undefined) {
@@ -379,7 +379,7 @@ export class FakeStore {
 		name: string,
 		startDate: string,
 		endDate: string,
-		location: string
+		location: string,
 	): FakeEvent | undefined {
 		if (this.findSeason(teamSlug, seasonSlug) === undefined) {
 			return undefined;
@@ -389,23 +389,19 @@ export class FakeStore {
 		const event: FakeEvent = {
 			id: randomUUID(),
 			slug: uniqueSlug(slugify(name), (candidate) =>
-				seasonEvents.some((existing) => existing.slug === candidate)
+				seasonEvents.some((existing) => existing.slug === candidate),
 			),
 			name,
 			startDate,
 			endDate,
-			location
+			location,
 		};
 		seasonEvents.push(event);
 		this.eventsBySeason.set(key, seasonEvents);
 		return event;
 	}
 
-	findEvent(
-		teamSlug: string,
-		seasonSlug: string,
-		eventSlug: string
-	): FakeEvent | undefined {
+	findEvent(teamSlug: string, seasonSlug: string, eventSlug: string): FakeEvent | undefined {
 		return this.eventsBySeason
 			.get(seasonKey(teamSlug, seasonSlug))
 			?.find((event) => event.slug === eventSlug);
@@ -426,7 +422,7 @@ export class FakeStore {
 		teamSlug: string,
 		seasonSlug: string,
 		eventSlug: string,
-		patch: { name?: string; startDate?: string; endDate?: string; location?: string }
+		patch: { name?: string; startDate?: string; endDate?: string; location?: string },
 	): FakeEvent | undefined {
 		const event = this.findEvent(teamSlug, seasonSlug, eventSlug);
 		if (event === undefined) {
@@ -472,7 +468,7 @@ export class FakeStore {
 		eventSlug: string,
 		opponentName: string,
 		scheduledAt: string,
-		pointCap: bigint
+		pointCap: bigint,
 	): FakeMatch | undefined {
 		if (this.findEvent(teamSlug, seasonSlug, eventSlug) === undefined) {
 			return undefined;
@@ -482,11 +478,11 @@ export class FakeStore {
 		const match: FakeMatch = {
 			id: randomUUID(),
 			slug: uniqueSlug(slugify(opponentName), (candidate) =>
-				eventMatches.some((existing) => existing.slug === candidate)
+				eventMatches.some((existing) => existing.slug === candidate),
 			),
 			opponentName,
 			scheduledAt,
-			pointCap
+			pointCap,
 		};
 		eventMatches.push(match);
 		this.matchesByEvent.set(key, eventMatches);
@@ -497,7 +493,7 @@ export class FakeStore {
 		teamSlug: string,
 		seasonSlug: string,
 		eventSlug: string,
-		matchSlug: string
+		matchSlug: string,
 	): FakeMatch | undefined {
 		return this.matchesByEvent
 			.get(eventKey(teamSlug, seasonSlug, eventSlug))
@@ -509,7 +505,7 @@ export class FakeStore {
 		seasonSlug: string,
 		eventSlug: string,
 		offset: number,
-		limit: number
+		limit: number,
 	): FakeMatch[] {
 		const matches = this.matchesByEvent.get(eventKey(teamSlug, seasonSlug, eventSlug)) ?? [];
 		const start = Math.max(offset, 0);
@@ -526,7 +522,7 @@ export class FakeStore {
 		seasonSlug: string,
 		eventSlug: string,
 		matchSlug: string,
-		patch: { opponentName?: string; scheduledAt?: string; pointCap?: bigint }
+		patch: { opponentName?: string; scheduledAt?: string; pointCap?: bigint },
 	): FakeMatch | undefined {
 		const match = this.findMatch(teamSlug, seasonSlug, eventSlug, matchSlug);
 		if (match === undefined) {
@@ -545,12 +541,7 @@ export class FakeStore {
 	}
 
 	/** Hard delete. */
-	deleteMatch(
-		teamSlug: string,
-		seasonSlug: string,
-		eventSlug: string,
-		matchSlug: string
-	): boolean {
+	deleteMatch(teamSlug: string, seasonSlug: string, eventSlug: string, matchSlug: string): boolean {
 		const matches = this.matchesByEvent.get(eventKey(teamSlug, seasonSlug, eventSlug));
 		if (matches === undefined) {
 			return false;
@@ -574,9 +565,9 @@ export class FakeStore {
 		const player: FakePlayer = {
 			id: randomUUID(),
 			slug: uniqueSlug(slugify(displayName), (candidate) =>
-				teamPlayers.some((existing) => existing.slug === candidate)
+				teamPlayers.some((existing) => existing.slug === candidate),
 			),
-			names: [...names]
+			names: [...names],
 		};
 		teamPlayers.push(player);
 		this.playersByTeamSlug.set(teamSlug, teamPlayers);
@@ -584,9 +575,7 @@ export class FakeStore {
 	}
 
 	findPlayer(teamSlug: string, playerSlug: string): FakePlayer | undefined {
-		return this.playersByTeamSlug
-			.get(teamSlug)
-			?.find((player) => player.slug === playerSlug);
+		return this.playersByTeamSlug.get(teamSlug)?.find((player) => player.slug === playerSlug);
 	}
 
 	listPlayers(teamSlug: string, offset: number, limit: number): FakePlayer[] {
@@ -600,11 +589,7 @@ export class FakeStore {
 		return this.playersByTeamSlug.get(teamSlug)?.length ?? 0;
 	}
 
-	updatePlayerNames(
-		teamSlug: string,
-		playerSlug: string,
-		names: string[]
-	): FakePlayer | undefined {
+	updatePlayerNames(teamSlug: string, playerSlug: string, names: string[]): FakePlayer | undefined {
 		const player = this.findPlayer(teamSlug, playerSlug);
 		if (player === undefined) {
 			return undefined;
@@ -633,9 +618,7 @@ export class FakeStore {
 		for (const season of this.seasonsByTeamSlug.get(teamSlug) ?? []) {
 			this.seasonRosterIds.get(seasonKey(teamSlug, season.slug))?.delete(player.id);
 			for (const event of this.eventsBySeason.get(seasonKey(teamSlug, season.slug)) ?? []) {
-				this.eventRosterIds
-					.get(eventKey(teamSlug, season.slug, event.slug))
-					?.delete(player.id);
+				this.eventRosterIds.get(eventKey(teamSlug, season.slug, event.slug))?.delete(player.id);
 			}
 		}
 		return true;
@@ -668,13 +651,13 @@ export class FakeStore {
 		teamSlug: string,
 		seasonSlug: string,
 		offset: number,
-		limit: number
+		limit: number,
 	): FakePlayer[] {
 		return this.resolveRoster(
 			teamSlug,
 			this.seasonRosterIds.get(seasonKey(teamSlug, seasonSlug)),
 			offset,
-			limit
+			limit,
 		);
 	}
 
@@ -689,7 +672,7 @@ export class FakeStore {
 		teamSlug: string,
 		seasonSlug: string,
 		eventSlug: string,
-		playerId: string
+		playerId: string,
 	): boolean {
 		if (this.findEvent(teamSlug, seasonSlug, eventSlug) === undefined) {
 			return false;
@@ -705,7 +688,7 @@ export class FakeStore {
 		teamSlug: string,
 		seasonSlug: string,
 		eventSlug: string,
-		playerId: string
+		playerId: string,
 	): boolean {
 		if (this.findEvent(teamSlug, seasonSlug, eventSlug) === undefined) {
 			return false;
@@ -719,13 +702,13 @@ export class FakeStore {
 		seasonSlug: string,
 		eventSlug: string,
 		offset: number,
-		limit: number
+		limit: number,
 	): FakePlayer[] {
 		return this.resolveRoster(
 			teamSlug,
 			this.eventRosterIds.get(eventKey(teamSlug, seasonSlug, eventSlug)),
 			offset,
-			limit
+			limit,
 		);
 	}
 
@@ -738,7 +721,7 @@ export class FakeStore {
 		teamSlug: string,
 		ids: Set<string> | undefined,
 		offset: number,
-		limit: number
+		limit: number,
 	): FakePlayer[] {
 		if (ids === undefined) {
 			return [];

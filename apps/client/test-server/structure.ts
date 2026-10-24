@@ -23,14 +23,7 @@
 import { Code, type HandlerContext, type ServiceImpl } from '@connectrpc/connect';
 
 import { connectError, requireUser } from './auth.ts';
-import type {
-	FakeEvent,
-	FakeMatch,
-	FakePlayer,
-	FakeSeason,
-	FakeStore,
-	FakeTeam
-} from './store.ts';
+import type { FakeEvent, FakeMatch, FakePlayer, FakeSeason, FakeStore, FakeTeam } from './store.ts';
 import { EventService } from '../../../packages/shared/src/gen/mybadcoach/events/v1/events_pb.ts';
 import { MatchService } from '../../../packages/shared/src/gen/mybadcoach/matches/v1/matches_pb.ts';
 import { PlayerService } from '../../../packages/shared/src/gen/mybadcoach/players/v1/players_pb.ts';
@@ -53,7 +46,7 @@ function permissionDenied(message: string): Error {
 
 function invalidField(field: string, description: string): Error {
 	return connectError(Code.InvalidArgument, 'invalid_argument', 'validation failed', [
-		{ field, description }
+		{ field, description },
 	]);
 }
 
@@ -88,7 +81,7 @@ interface Membership {
 function requireMembership(
 	store: FakeStore,
 	context: HandlerContext,
-	teamSlug: string
+	teamSlug: string,
 ): Membership {
 	if (teamSlug === '') {
 		throw invalidField('team_slug', 'must not be empty');
@@ -124,7 +117,7 @@ function requireEvent(
 	store: FakeStore,
 	teamSlug: string,
 	seasonSlug: string,
-	eventSlug: string
+	eventSlug: string,
 ): FakeEvent {
 	const event = store.findEvent(teamSlug, seasonSlug, eventSlug);
 	if (event === undefined) {
@@ -138,7 +131,7 @@ function requireMatch(
 	teamSlug: string,
 	seasonSlug: string,
 	eventSlug: string,
-	matchSlug: string
+	matchSlug: string,
 ): FakeMatch {
 	const match = store.findMatch(teamSlug, seasonSlug, eventSlug, matchSlug);
 	if (match === undefined) {
@@ -183,8 +176,7 @@ export function createTeamImplementation(store: FakeStore): TeamImplementation {
 
 		updateTeam(request, context) {
 			requireOwner(store, context, request.teamSlug);
-			const name =
-				request.name === undefined ? undefined : requiredName(request.name, 'name');
+			const name = request.name === undefined ? undefined : requiredName(request.name, 'name');
 			const team =
 				name === undefined
 					? store.findTeamBySlug(request.teamSlug)
@@ -208,8 +200,8 @@ export function createTeamImplementation(store: FakeStore): TeamImplementation {
 			return {
 				memberships: store.listTeamsForUser(user.id).map((membership) => ({
 					team: teamMessage(membership.team),
-					role: membership.role
-				}))
+					role: membership.role,
+				})),
 			};
 		},
 
@@ -227,9 +219,9 @@ export function createTeamImplementation(store: FakeStore): TeamImplementation {
 			}
 			store.addMembership(request.teamSlug, user.id);
 			return {
-				membership: { user: { id: user.id, email: user.email, name: user.name }, role: 'member' }
+				membership: { user: { id: user.id, email: user.email, name: user.name }, role: 'member' },
 			};
-		}
+		},
 	};
 }
 
@@ -242,7 +234,7 @@ export function createSeasonImplementation(store: FakeStore): SeasonImplementati
 				request.teamSlug,
 				requiredName(request.name, 'name'),
 				request.startDate ?? '',
-				request.endDate ?? ''
+				request.endDate ?? '',
 			);
 			if (season === undefined) {
 				throw notFound('team not found');
@@ -280,7 +272,7 @@ export function createSeasonImplementation(store: FakeStore): SeasonImplementati
 			requireMembership(store, context, request.teamSlug);
 			return {
 				seasons: store.listSeasons(request.teamSlug, request.offset, request.limit),
-				total: BigInt(store.countSeasons(request.teamSlug))
+				total: BigInt(store.countSeasons(request.teamSlug)),
 			};
 		},
 
@@ -316,16 +308,11 @@ export function createSeasonImplementation(store: FakeStore): SeasonImplementati
 			requireSeason(store, request.teamSlug, request.seasonSlug);
 			return {
 				players: store
-					.listSeasonRoster(
-						request.teamSlug,
-						request.seasonSlug,
-						request.offset,
-						request.limit
-					)
+					.listSeasonRoster(request.teamSlug, request.seasonSlug, request.offset, request.limit)
 					.map(playerMessage),
-				total: BigInt(store.countSeasonRoster(request.teamSlug, request.seasonSlug))
+				total: BigInt(store.countSeasonRoster(request.teamSlug, request.seasonSlug)),
 			};
-		}
+		},
 
 		// CopySeasonRoster stays unimplemented: it is out of this ticket's UI scope.
 	};
@@ -343,7 +330,7 @@ export function createEventImplementation(store: FakeStore): EventImplementation
 				requiredName(request.name, 'name'),
 				request.startDate ?? '',
 				request.endDate ?? '',
-				request.location ?? ''
+				request.location ?? '',
 			);
 			if (event === undefined) {
 				throw notFound('season not found');
@@ -355,12 +342,7 @@ export function createEventImplementation(store: FakeStore): EventImplementation
 			requireMembership(store, context, request.teamSlug);
 			requireSeason(store, request.teamSlug, request.seasonSlug);
 			return {
-				event: requireEvent(
-					store,
-					request.teamSlug,
-					request.seasonSlug,
-					request.eventSlug
-				)
+				event: requireEvent(store, request.teamSlug, request.seasonSlug, request.eventSlug),
 			};
 		},
 
@@ -369,8 +351,7 @@ export function createEventImplementation(store: FakeStore): EventImplementation
 			requireSeason(store, request.teamSlug, request.seasonSlug);
 			requireEvent(store, request.teamSlug, request.seasonSlug, request.eventSlug);
 
-			const patch: { name?: string; startDate?: string; endDate?: string; location?: string } =
-				{};
+			const patch: { name?: string; startDate?: string; endDate?: string; location?: string } = {};
 			if (request.name !== undefined) {
 				patch.name = requiredName(request.name, 'name');
 			}
@@ -387,7 +368,7 @@ export function createEventImplementation(store: FakeStore): EventImplementation
 				request.teamSlug,
 				request.seasonSlug,
 				request.eventSlug,
-				patch
+				patch,
 			);
 			if (event === undefined) {
 				throw notFound('event not found');
@@ -403,18 +384,16 @@ export function createEventImplementation(store: FakeStore): EventImplementation
 					request.teamSlug,
 					request.seasonSlug,
 					request.offset,
-					request.limit
+					request.limit,
 				),
-				total: BigInt(store.countEvents(request.teamSlug, request.seasonSlug))
+				total: BigInt(store.countEvents(request.teamSlug, request.seasonSlug)),
 			};
 		},
 
 		// Member-gated, not owner-only (structure contract ticket 05).
 		deleteEvent(request, context) {
 			requireMembership(store, context, request.teamSlug);
-			if (
-				!store.deleteEvent(request.teamSlug, request.seasonSlug, request.eventSlug)
-			) {
+			if (!store.deleteEvent(request.teamSlug, request.seasonSlug, request.eventSlug)) {
 				throw notFound('event not found');
 			}
 			return {};
@@ -426,12 +405,7 @@ export function createEventImplementation(store: FakeStore): EventImplementation
 			requireSeason(store, request.teamSlug, request.seasonSlug);
 			requireEvent(store, request.teamSlug, request.seasonSlug, request.eventSlug);
 			const player = requirePlayer(store, request.teamSlug, request.playerSlug);
-			store.addEventRosterEntry(
-				request.teamSlug,
-				request.seasonSlug,
-				request.eventSlug,
-				player.id
-			);
+			store.addEventRosterEntry(request.teamSlug, request.seasonSlug, request.eventSlug, player.id);
 			return { player: playerMessage(player) };
 		},
 
@@ -444,7 +418,7 @@ export function createEventImplementation(store: FakeStore): EventImplementation
 				request.teamSlug,
 				request.seasonSlug,
 				request.eventSlug,
-				player.id
+				player.id,
 			);
 			return {};
 		},
@@ -460,18 +434,14 @@ export function createEventImplementation(store: FakeStore): EventImplementation
 						request.seasonSlug,
 						request.eventSlug,
 						request.offset,
-						request.limit
+						request.limit,
 					)
 					.map(playerMessage),
 				total: BigInt(
-					store.countEventRoster(
-						request.teamSlug,
-						request.seasonSlug,
-						request.eventSlug
-					)
-				)
+					store.countEventRoster(request.teamSlug, request.seasonSlug, request.eventSlug),
+				),
 			};
-		}
+		},
 	};
 }
 
@@ -487,7 +457,7 @@ export function createMatchImplementation(store: FakeStore): MatchImplementation
 				request.eventSlug,
 				requiredName(request.opponentName, 'opponent_name'),
 				request.scheduledAt ?? '',
-				request.pointCap ?? 0n
+				request.pointCap ?? 0n,
 			);
 			if (match === undefined) {
 				throw notFound('event not found');
@@ -504,8 +474,8 @@ export function createMatchImplementation(store: FakeStore): MatchImplementation
 					request.teamSlug,
 					request.seasonSlug,
 					request.eventSlug,
-					request.matchSlug
-				)
+					request.matchSlug,
+				),
 			};
 		},
 
@@ -517,7 +487,7 @@ export function createMatchImplementation(store: FakeStore): MatchImplementation
 				request.teamSlug,
 				request.seasonSlug,
 				request.eventSlug,
-				request.matchSlug
+				request.matchSlug,
 			);
 
 			const patch: { opponentName?: string; scheduledAt?: string; pointCap?: bigint } = {};
@@ -535,7 +505,7 @@ export function createMatchImplementation(store: FakeStore): MatchImplementation
 				request.seasonSlug,
 				request.eventSlug,
 				request.matchSlug,
-				patch
+				patch,
 			);
 			if (match === undefined) {
 				throw notFound('match not found');
@@ -552,15 +522,9 @@ export function createMatchImplementation(store: FakeStore): MatchImplementation
 					request.seasonSlug,
 					request.eventSlug,
 					request.offset,
-					request.limit
+					request.limit,
 				),
-				total: BigInt(
-					store.countMatches(
-						request.teamSlug,
-						request.seasonSlug,
-						request.eventSlug
-					)
-				)
+				total: BigInt(store.countMatches(request.teamSlug, request.seasonSlug, request.eventSlug)),
 			};
 		},
 
@@ -572,7 +536,7 @@ export function createMatchImplementation(store: FakeStore): MatchImplementation
 					request.teamSlug,
 					request.seasonSlug,
 					request.eventSlug,
-					request.matchSlug
+					request.matchSlug,
 				)
 			) {
 				throw notFound('match not found');
@@ -599,9 +563,7 @@ export function createPlayerImplementation(store: FakeStore): PlayerImplementati
 		getPlayer(request, context) {
 			requireMembership(store, context, request.teamSlug);
 			return {
-				player: playerMessage(
-					requirePlayer(store, request.teamSlug, request.playerSlug)
-				)
+				player: playerMessage(requirePlayer(store, request.teamSlug, request.playerSlug)),
 			};
 		},
 
@@ -616,7 +578,7 @@ export function createPlayerImplementation(store: FakeStore): PlayerImplementati
 					: store.updatePlayerNames(
 							request.teamSlug,
 							request.playerSlug,
-							normalizeNames(request.names)
+							normalizeNames(request.names),
 						);
 			if (player === undefined) {
 				throw notFound('player not found');
@@ -640,8 +602,8 @@ export function createPlayerImplementation(store: FakeStore): PlayerImplementati
 				players: store
 					.listPlayers(request.teamSlug, request.offset, request.limit)
 					.map(playerMessage),
-				total: BigInt(store.countPlayers(request.teamSlug))
+				total: BigInt(store.countPlayers(request.teamSlug)),
 			};
-		}
+		},
 	};
 }

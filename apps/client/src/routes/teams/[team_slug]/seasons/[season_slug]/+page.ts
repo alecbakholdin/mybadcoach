@@ -2,7 +2,7 @@ import {
 	events as eventClient,
 	players as playerClient,
 	seasons as seasonClient,
-	teams
+	teams,
 } from '#lib/api';
 import { undefinedIfNotFound } from '#lib/api/errors';
 import { session } from '#lib/session.svelte';
@@ -13,7 +13,7 @@ import { teamRoleOf, type SeasonDetailData } from '#lib/structure-data';
 // A stale link maps to the screen's own not-found state instead of an error
 // page, matching the event and match loaders.
 export const load = async ({
-	params
+	params,
 }: {
 	params: { team_slug: string; season_slug: string };
 }): Promise<SeasonDetailData> => {
@@ -29,7 +29,7 @@ export const load = async ({
 			eventsTotal: 0,
 			roster: [],
 			rosterTotal: 0,
-			teamPlayers: []
+			teamPlayers: [],
 		};
 	}
 	const myTeams = await teams.listMyTeams({});
@@ -45,7 +45,7 @@ export const load = async ({
 			eventsTotal: 0,
 			roster: [],
 			rosterTotal: 0,
-			teamPlayers: []
+			teamPlayers: [],
 		};
 	}
 
@@ -53,9 +53,9 @@ export const load = async ({
 		undefinedIfNotFound(seasonClient.getSeason({ teamSlug, seasonSlug })),
 		undefinedIfNotFound(eventClient.listEvents({ teamSlug, seasonSlug, offset: 0, limit: 100 })),
 		undefinedIfNotFound(
-			seasonClient.listSeasonRoster({ teamSlug, seasonSlug, offset: 0, limit: 100 })
+			seasonClient.listSeasonRoster({ teamSlug, seasonSlug, offset: 0, limit: 100 }),
 		),
-		playerClient.listPlayers({ teamSlug, offset: 0, limit: 100 })
+		playerClient.listPlayers({ teamSlug, offset: 0, limit: 100 }),
 	]);
 	return {
 		teamSlug,
@@ -67,6 +67,6 @@ export const load = async ({
 		eventsTotal: Number(eventResponse?.total ?? 0n),
 		roster: rosterResponse?.players ?? [],
 		rosterTotal: Number(rosterResponse?.total ?? 0n),
-		teamPlayers: playerResponse.players
+		teamPlayers: playerResponse.players,
 	};
 };

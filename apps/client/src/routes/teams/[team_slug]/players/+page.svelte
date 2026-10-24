@@ -50,7 +50,7 @@
 		try {
 			await playerClient.createPlayer({
 				teamSlug: data.teamSlug,
-				names: buildNames(newDisplayName, newAliases)
+				names: buildNames(newDisplayName, newAliases),
 			});
 			newDisplayName = '';
 			newAliases = '';
@@ -95,7 +95,7 @@
 			await playerClient.updatePlayer({
 				teamSlug: data.teamSlug,
 				playerSlug: editingSlug,
-				names: buildNames(editDisplayName, editAliases)
+				names: buildNames(editDisplayName, editAliases),
 			});
 			editingSlug = null;
 			await refreshAll();
@@ -111,7 +111,7 @@
 	async function handleDelete(player: Player): Promise<void> {
 		if (
 			!confirm(
-				`Delete ${displayName(player)}? This removes them from every season and event roster.`
+				`Delete ${displayName(player)}? This removes them from every season and event roster.`,
 			)
 		) {
 			return;
@@ -121,7 +121,7 @@
 		try {
 			await playerClient.deletePlayer({
 				teamSlug: data.teamSlug,
-				playerSlug: player.slug
+				playerSlug: player.slug,
 			});
 			await refreshAll();
 		} catch {
@@ -176,11 +176,7 @@
 									</div>
 									<div class="field">
 										<label for="edit-player-aliases">Aliases (comma-separated)</label>
-										<input
-											id="edit-player-aliases"
-											type="text"
-											bind:value={editAliases}
-										/>
+										<input id="edit-player-aliases" type="text" bind:value={editAliases} />
 									</div>
 									{#if editError !== ''}
 										<p class="form-error" role="alert">{editError}</p>

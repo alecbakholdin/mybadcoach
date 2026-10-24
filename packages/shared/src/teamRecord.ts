@@ -6,15 +6,15 @@
  * input rather than from stored entity fields.
  */
 export interface MatchScore {
-  ourScore: number;
-  opponentScore: number;
+	ourScore: number;
+	opponentScore: number;
 }
 
 /** A team's win/loss/tie totals over completed matches. */
 export interface TeamRecord {
-  wins: number;
-  losses: number;
-  ties: number;
+	wins: number;
+	losses: number;
+	ties: number;
 }
 
 /**
@@ -25,17 +25,17 @@ export interface TeamRecord {
  * No scores yields zeroed counts, never null.
  */
 export function computeTeamRecord(scores: readonly MatchScore[]): TeamRecord {
-  const record: TeamRecord = { wins: 0, losses: 0, ties: 0 };
+	const record: TeamRecord = { wins: 0, losses: 0, ties: 0 };
 
-  for (const { ourScore, opponentScore } of scores) {
-    if (ourScore > opponentScore) {
-      record.wins += 1;
-    } else if (ourScore < opponentScore) {
-      record.losses += 1;
-    } else {
-      record.ties += 1;
-    }
-  }
+	for (const { ourScore, opponentScore } of scores) {
+		if (ourScore > opponentScore) {
+			record.wins += 1;
+		} else if (ourScore < opponentScore) {
+			record.losses += 1;
+		} else {
+			record.ties += 1;
+		}
+	}
 
-  return record;
+	return record;
 }

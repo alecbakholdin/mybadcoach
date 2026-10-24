@@ -24,7 +24,7 @@ function promoteWarnings(rules) {
 				return [name, Array.isArray(value) ? ['error', ...value.slice(1)] : 'error'];
 			}
 			return [name, value];
-		})
+		}),
 	);
 }
 
@@ -37,12 +37,12 @@ const importOrder = [
 			{ pattern: '$shared', group: 'internal' },
 			{ pattern: '$shared/**', group: 'internal' },
 			{ pattern: '#lib', group: 'internal' },
-			{ pattern: '#lib/**', group: 'internal' }
+			{ pattern: '#lib/**', group: 'internal' },
 		],
 		pathGroupsExcludedImportTypes: ['builtin'],
 		'newlines-between': 'always',
-		alphabetize: { order: 'asc', caseInsensitive: true }
-	}
+		alphabetize: { order: 'asc', caseInsensitive: true },
+	},
 ];
 
 export default tseslint.config(
@@ -67,13 +67,13 @@ export default tseslint.config(
 			'server/internal/gen/**',
 			'packages/shared/src/gen/**',
 			// The lint config itself is configuration, not application code.
-			'eslint.config.js'
-		]
+			'eslint.config.js',
+		],
 	},
 	{
 		linterOptions: {
-			reportUnusedDisableDirectives: 'error'
-		}
+			reportUnusedDisableDirectives: 'error',
+		},
 	},
 
 	js.configs.recommended,
@@ -88,8 +88,8 @@ export default tseslint.config(
 	{
 		rules: {
 			'svelte/no-at-debug-tags': 'error',
-			'svelte/no-inspect': 'error'
-		}
+			'svelte/no-inspect': 'error',
+		},
 	},
 
 	{
@@ -98,8 +98,8 @@ export default tseslint.config(
 			parserOptions: {
 				projectService: true,
 				tsconfigRootDir: import.meta.dirname,
-				extraFileExtensions: ['.svelte']
-			}
+				extraFileExtensions: ['.svelte'],
+			},
 		},
 		rules: {
 			// Policy from docs/testing.md, stated explicitly even where the
@@ -114,8 +114,8 @@ export default tseslint.config(
 					caughtErrors: 'all',
 					caughtErrorsIgnorePattern: '^_',
 					destructuredArrayIgnorePattern: '^_',
-					ignoreRestSiblings: true
-				}
+					ignoreRestSiblings: true,
+				},
 			],
 			'@typescript-eslint/ban-ts-comment': [
 				'error',
@@ -123,16 +123,13 @@ export default tseslint.config(
 					'ts-expect-error': 'allow-with-description',
 					'ts-ignore': true,
 					'ts-nocheck': true,
-					minimumDescriptionLength: 10
-				}
+					minimumDescriptionLength: 10,
+				},
 			],
 			'no-console': 'error',
 			// Numbers are safe to interpolate; objects/unknowns are not.
-			'@typescript-eslint/restrict-template-expressions': [
-				'error',
-				{ allowNumber: true }
-			]
-		}
+			'@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+		},
 	},
 
 	// Svelte 5 runes: parse components (and `.svelte.ts` rune modules) in runes
@@ -143,9 +140,9 @@ export default tseslint.config(
 			globals: { ...globals.browser },
 			parserOptions: {
 				parser: tseslint.parser,
-				svelteFeatures: { runes: true }
-			}
-		}
+				svelteFeatures: { runes: true },
+			},
+		},
 	},
 
 	// Import sorting/grouping: builtins, external, internal aliases, relative.
@@ -157,34 +154,34 @@ export default tseslint.config(
 			'import-x/no-duplicates': 'error',
 			// Module resolution is TypeScript's and Vite's job (including the
 			// native `.ts` specifiers in generated code); import-x only orders.
-			'import-x/no-unresolved': 'off'
-		}
+			'import-x/no-unresolved': 'off',
+		},
 	},
 
 	// Runtime globals per workspace.
 	{
 		files: ['apps/client/src/**/*.ts', 'apps/client/src/**/*.svelte'],
-		languageOptions: { globals: { ...globals.browser } }
+		languageOptions: { globals: { ...globals.browser } },
 	},
 	{
 		files: ['packages/shared/**/*.ts'],
-		languageOptions: { globals: { ...globals.node } }
+		languageOptions: { globals: { ...globals.node } },
 	},
 	{
 		files: ['e2e/**/*.ts', 'apps/client/test-server/**/*.ts', '**/*.config.ts'],
-		languageOptions: { globals: { ...globals.node } }
+		languageOptions: { globals: { ...globals.node } },
 	},
 
 	// Playwright e2e specs: recommended preset with warnings promoted to errors.
 	{
 		files: ['e2e/**/*.ts'],
 		plugins: playwright.configs['flat/recommended'].plugins,
-		rules: promoteWarnings(playwright.configs['flat/recommended'].rules)
+		rules: promoteWarnings(playwright.configs['flat/recommended'].rules),
 	},
 
 	// The stub Connect server is a Node startup process; logging is explicit.
 	{
 		files: ['apps/client/test-server/**/*.ts'],
-		rules: { 'no-console': 'off' }
-	}
+		rules: { 'no-console': 'off' },
+	},
 );

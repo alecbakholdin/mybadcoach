@@ -8,7 +8,7 @@ import {
 	loginThroughUi,
 	PASSWORD,
 	registerThroughUi,
-	STUB_URL
+	STUB_URL,
 } from './helpers';
 
 // Frontend-only structure CRUD seam (ticket 06): the real SvelteKit build runs
@@ -75,7 +75,7 @@ test('creates, edits, and shows the season roster', async ({ page }) => {
 	await page.getByRole('button', { name: 'Save changes', exact: true }).click();
 
 	await expect(
-		page.getByRole('heading', { name: 'Spring 2026 (updated)', level: 1 })
+		page.getByRole('heading', { name: 'Spring 2026 (updated)', level: 1 }),
 	).toBeVisible();
 });
 
@@ -100,18 +100,16 @@ test('lets the owner delete a season and then the team', async ({ page }) => {
 });
 
 /** Seeds an owner + a non-owner member through the Connect boundary. */
-async function seedTeamWithMember(
-	playwright: PlaywrightWorkerArgs['playwright']
-): Promise<string> {
+async function seedTeamWithMember(playwright: PlaywrightWorkerArgs['playwright']): Promise<string> {
 	const ownerApi = await connectContext(playwright);
 	try {
 		const registered = await ownerApi.post(`/${AUTH}/Register`, {
-			data: { email: 'owner@example.com', password: PASSWORD, name: 'Owner One' }
+			data: { email: 'owner@example.com', password: PASSWORD, name: 'Owner One' },
 		});
 		expect(registered.ok()).toBe(true);
 
 		const created = await ownerApi.post(`/${TEAMS}/CreateTeam`, {
-			data: { name: 'Fleet Foxes' }
+			data: { name: 'Fleet Foxes' },
 		});
 		expect(created.ok()).toBe(true);
 		const body = (await created.json()) as { team?: { slug?: string } };
@@ -121,7 +119,7 @@ async function seedTeamWithMember(
 		const memberApi = await connectContext(playwright);
 		try {
 			const memberRegistered = await memberApi.post(`/${AUTH}/Register`, {
-				data: { email: 'member@example.com', password: PASSWORD, name: 'Member Two' }
+				data: { email: 'member@example.com', password: PASSWORD, name: 'Member Two' },
 			});
 			expect(memberRegistered.ok()).toBe(true);
 		} finally {
@@ -129,7 +127,7 @@ async function seedTeamWithMember(
 		}
 
 		const added = await ownerApi.post(`/${TEAMS}/AddMembership`, {
-			data: { teamSlug, email: 'member@example.com' }
+			data: { teamSlug, email: 'member@example.com' },
 		});
 		expect(added.ok()).toBe(true);
 		return teamSlug;

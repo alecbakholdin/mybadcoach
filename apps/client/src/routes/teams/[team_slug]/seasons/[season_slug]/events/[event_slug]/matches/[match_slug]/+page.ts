@@ -7,7 +7,7 @@ import { teamRoleOf, type MatchDetailData } from '#lib/structure-data';
 // non-member sees the not-found state without a second permission-denied
 // request; a missing event or match also maps to that state.
 export const load = async ({
-	params
+	params,
 }: {
 	params: {
 		team_slug: string;
@@ -20,7 +20,7 @@ export const load = async ({
 		team_slug: teamSlug,
 		season_slug: seasonSlug,
 		event_slug: eventSlug,
-		match_slug: matchSlug
+		match_slug: matchSlug,
 	} = params;
 	const empty = (): MatchDetailData => ({
 		teamSlug,
@@ -30,7 +30,7 @@ export const load = async ({
 		teamName: '',
 		eventName: '',
 		role: 'member',
-		match: undefined
+		match: undefined,
 	});
 	if ((await session.load()) === null) {
 		return empty();
@@ -43,9 +43,7 @@ export const load = async ({
 
 	const [eventResponse, matchResponse] = await Promise.all([
 		undefinedIfNotFound(eventClient.getEvent({ teamSlug, seasonSlug, eventSlug })),
-		undefinedIfNotFound(
-			matchClient.getMatch({ teamSlug, seasonSlug, eventSlug, matchSlug })
-		)
+		undefinedIfNotFound(matchClient.getMatch({ teamSlug, seasonSlug, eventSlug, matchSlug })),
 	]);
 	return {
 		teamSlug,
@@ -55,6 +53,6 @@ export const load = async ({
 		teamName: membership.team.name,
 		eventName: eventResponse?.event?.name ?? '',
 		role: teamRoleOf(membership.role),
-		match: matchResponse?.match
+		match: matchResponse?.match,
 	};
 };

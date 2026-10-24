@@ -6,7 +6,7 @@ import { teamRoleOf, type TeamDetailData } from '#lib/structure-data';
 // and the same call decides whether the team is visible at all: a non-member
 // sees the "team not found" state without a second permission-denied request.
 export const load = async ({
-	params
+	params,
 }: {
 	params: { team_slug: string };
 }): Promise<TeamDetailData> => {
@@ -25,6 +25,6 @@ export const load = async ({
 		teamSlug,
 		teamName: membership.team.name,
 		role: teamRoleOf(membership.role),
-		seasons: response.seasons
+		seasons: response.seasons,
 	};
 };

@@ -8,7 +8,7 @@ import {
 	loginThroughUi,
 	PASSWORD,
 	registerThroughUi,
-	STUB_URL
+	STUB_URL,
 } from './helpers';
 
 // Frontend-only player + roster seam (ticket 08): the real SvelteKit build runs
@@ -50,13 +50,9 @@ test('creates, edits, rosters, and deletes a player', async ({ page }) => {
 	// the row shows inputs rather than the old text, so target the list itself.
 	await adaRow.getByRole('button', { name: 'Edit', exact: true }).click();
 	await playersList.getByLabel('Display name', { exact: true }).fill('Ada King');
-	await playersList
-		.getByLabel('Aliases (comma-separated)', { exact: true })
-		.fill('Ada, Lovelace');
+	await playersList.getByLabel('Aliases (comma-separated)', { exact: true }).fill('Ada, Lovelace');
 	await playersList.getByRole('button', { name: 'Save player', exact: true }).click();
-	await expect(
-		playersList.getByRole('listitem').filter({ hasText: 'Ada King' })
-	).toBeVisible();
+	await expect(playersList.getByRole('listitem').filter({ hasText: 'Ada King' })).toBeVisible();
 
 	// Create a season and event to roster the player at both independent levels.
 	await page.goto('/teams/fleet-foxes');
@@ -67,23 +63,19 @@ test('creates, edits, rosters, and deletes a player', async ({ page }) => {
 	const seasonRoster = page.getByRole('list', { name: 'Season roster' });
 	await page.getByLabel('Player to add', { exact: true }).selectOption({ label: 'Ada King' });
 	await page.getByRole('button', { name: 'Add to season roster', exact: true }).click();
-	await expect(
-		seasonRoster.getByRole('listitem').filter({ hasText: 'Ada King' })
-	).toBeVisible();
+	await expect(seasonRoster.getByRole('listitem').filter({ hasText: 'Ada King' })).toBeVisible();
 
 	await page.getByLabel('Event name', { exact: true }).fill('Summer Classic');
 	await page.getByRole('button', { name: 'Create event', exact: true }).click();
 	await page.getByRole('link', { name: 'Summer Classic', exact: true }).click();
 	await expect(page).toHaveURL(
-		/\/teams\/fleet-foxes\/seasons\/spring-2026\/events\/summer-classic$/
+		/\/teams\/fleet-foxes\/seasons\/spring-2026\/events\/summer-classic$/,
 	);
 
 	const eventRoster = page.getByRole('list', { name: 'Event roster' });
 	await page.getByLabel('Player to add', { exact: true }).selectOption({ label: 'Ada King' });
 	await page.getByRole('button', { name: 'Add to event roster', exact: true }).click();
-	await expect(
-		eventRoster.getByRole('listitem').filter({ hasText: 'Ada King' })
-	).toBeVisible();
+	await expect(eventRoster.getByRole('listitem').filter({ hasText: 'Ada King' })).toBeVisible();
 
 	// Removing from the event roster leaves the season roster untouched.
 	await eventRoster.getByRole('button', { name: 'Remove', exact: true }).click();
@@ -94,9 +86,10 @@ test('creates, edits, rosters, and deletes a player', async ({ page }) => {
 		page
 			.getByRole('list', { name: 'Season roster' })
 			.getByRole('listitem')
-			.filter({ hasText: 'Ada King' })
+			.filter({ hasText: 'Ada King' }),
 	).toBeVisible();
-	await page.getByRole('list', { name: 'Season roster' })
+	await page
+		.getByRole('list', { name: 'Season roster' })
 		.getByRole('button', { name: 'Remove', exact: true })
 		.click();
 	await expect(page.getByText("No players on this season's roster yet.")).toBeVisible();
@@ -123,25 +116,24 @@ interface SeededPlayer {
  * the Connect boundary. Also proves the server rejects a member's DeletePlayer.
  */
 async function seedMemberWithPlayer(
-	playwright: PlaywrightWorkerArgs['playwright']
+	playwright: PlaywrightWorkerArgs['playwright'],
 ): Promise<SeededPlayer> {
 	const ownerApi = await connectContext(playwright);
 	try {
 		const registered = await ownerApi.post(`/${AUTH}/Register`, {
-			data: { email: 'owner@example.com', password: PASSWORD, name: 'Owner One' }
+			data: { email: 'owner@example.com', password: PASSWORD, name: 'Owner One' },
 		});
 		expect(registered.ok()).toBe(true);
 
 		const createdTeam = await ownerApi.post(`/${TEAMS}/CreateTeam`, {
-			data: { name: 'Fleet Foxes' }
+			data: { name: 'Fleet Foxes' },
 		});
 		expect(createdTeam.ok()).toBe(true);
-		const teamSlug =
-			((await createdTeam.json()) as { team?: { slug?: string } }).team?.slug ?? '';
+		const teamSlug = ((await createdTeam.json()) as { team?: { slug?: string } }).team?.slug ?? '';
 		expect(teamSlug).toBe('fleet-foxes');
 
 		const createdPlayer = await ownerApi.post(`/${PLAYERS}/CreatePlayer`, {
-			data: { teamSlug, names: ['Ada Lovelace', 'Ada'] }
+			data: { teamSlug, names: ['Ada Lovelace', 'Ada'] },
 		});
 		expect(createdPlayer.ok()).toBe(true);
 		const playerSlug =
@@ -149,7 +141,7 @@ async function seedMemberWithPlayer(
 		expect(playerSlug).toBe('ada-lovelace');
 
 		const createdSeason = await ownerApi.post(`/${SEASONS}/CreateSeason`, {
-			data: { teamSlug, name: 'Spring 2026' }
+			data: { teamSlug, name: 'Spring 2026' },
 		});
 		expect(createdSeason.ok()).toBe(true);
 		const seasonSlug =
@@ -157,7 +149,7 @@ async function seedMemberWithPlayer(
 		expect(seasonSlug).toBe('spring-2026');
 
 		const createdEvent = await ownerApi.post(`/${EVENTS}/CreateEvent`, {
-			data: { teamSlug, seasonSlug, name: 'Summer Classic' }
+			data: { teamSlug, seasonSlug, name: 'Summer Classic' },
 		});
 		expect(createdEvent.ok()).toBe(true);
 		const eventSlug =
@@ -167,18 +159,18 @@ async function seedMemberWithPlayer(
 		const memberApi = await connectContext(playwright);
 		try {
 			const memberRegistered = await memberApi.post(`/${AUTH}/Register`, {
-				data: { email: 'member@example.com', password: PASSWORD, name: 'Member Two' }
+				data: { email: 'member@example.com', password: PASSWORD, name: 'Member Two' },
 			});
 			expect(memberRegistered.ok()).toBe(true);
 
 			const added = await ownerApi.post(`/${TEAMS}/AddMembership`, {
-				data: { teamSlug, email: 'member@example.com' }
+				data: { teamSlug, email: 'member@example.com' },
 			});
 			expect(added.ok()).toBe(true);
 
 			// A member is allowed on rosters but not on player deletion.
 			const denied = await memberApi.post(`/${PLAYERS}/DeletePlayer`, {
-				data: { teamSlug, playerSlug }
+				data: { teamSlug, playerSlug },
 			});
 			expect(denied.ok()).toBe(false);
 			expect(denied.status()).toBe(403);
@@ -194,7 +186,7 @@ async function seedMemberWithPlayer(
 
 test('lets a non-owner member manage rosters but not delete players', async ({
 	page,
-	playwright
+	playwright,
 }) => {
 	const { teamSlug, seasonSlug, eventSlug } = await seedMemberWithPlayer(playwright);
 
@@ -218,7 +210,7 @@ test('lets a non-owner member manage rosters but not delete players', async ({
 	await page.getByRole('button', { name: 'Add to season roster', exact: true }).click();
 	const seasonRoster = page.getByRole('list', { name: 'Season roster' });
 	await expect(
-		seasonRoster.getByRole('listitem').filter({ hasText: 'Ada Lovelace' })
+		seasonRoster.getByRole('listitem').filter({ hasText: 'Ada Lovelace' }),
 	).toBeVisible();
 	await seasonRoster.getByRole('button', { name: 'Remove', exact: true }).click();
 	await expect(page.getByText("No players on this season's roster yet.")).toBeVisible();
@@ -228,9 +220,7 @@ test('lets a non-owner member manage rosters but not delete players', async ({
 	await page.getByLabel('Player to add', { exact: true }).selectOption({ label: 'Ada Lovelace' });
 	await page.getByRole('button', { name: 'Add to event roster', exact: true }).click();
 	const eventRoster = page.getByRole('list', { name: 'Event roster' });
-	await expect(
-		eventRoster.getByRole('listitem').filter({ hasText: 'Ada Lovelace' })
-	).toBeVisible();
+	await expect(eventRoster.getByRole('listitem').filter({ hasText: 'Ada Lovelace' })).toBeVisible();
 	await eventRoster.getByRole('button', { name: 'Remove', exact: true }).click();
 	await expect(page.getByText("No players on this event's roster yet.")).toBeVisible();
 });

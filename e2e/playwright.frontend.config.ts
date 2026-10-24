@@ -19,7 +19,7 @@ export default defineConfig({
 	reporter: [['list']],
 	use: {
 		baseURL: `http://127.0.0.1:${CLIENT_PORT}`,
-		trace: 'retain-on-failure'
+		trace: 'retain-on-failure',
 	},
 	webServer: [
 		{
@@ -30,7 +30,7 @@ export default defineConfig({
 			url: `http://127.0.0.1:${STUB_PORT}/__test/health`,
 			env: { MBC_STUB_PORT: String(STUB_PORT) },
 			reuseExistingServer: !process.env.CI,
-			timeout: 30_000
+			timeout: 30_000,
 		},
 		{
 			// Build then serve the production SPA with Vite preview, whose
@@ -40,7 +40,7 @@ export default defineConfig({
 			cwd: repoRoot,
 			url: `http://127.0.0.1:${CLIENT_PORT}`,
 			reuseExistingServer: !process.env.CI,
-			timeout: 180_000
-		}
-	]
+			timeout: 180_000,
+		},
+	],
 });

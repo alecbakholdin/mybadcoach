@@ -46,7 +46,7 @@ test('login accepts a registered account', async ({ page, playwright }) => {
 	const api = await connectContext(playwright);
 	try {
 		const registered = await api.post(`/${AUTH}/Register`, {
-			data: { email, password: PASSWORD, name: 'Robin Handler' }
+			data: { email, password: PASSWORD, name: 'Robin Handler' },
 		});
 		expect(registered.status()).toBe(200);
 	} finally {
@@ -77,7 +77,7 @@ test('register surfaces a duplicate email on the form', async ({ page, playwrigh
 	const api = await connectContext(playwright);
 	try {
 		const registered = await api.post(`/${AUTH}/Register`, {
-			data: { email, password: PASSWORD, name: 'Already Here' }
+			data: { email, password: PASSWORD, name: 'Already Here' },
 		});
 		expect(registered.status()).toBe(200);
 	} finally {

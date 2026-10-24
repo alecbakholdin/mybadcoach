@@ -41,9 +41,7 @@
 
 	async function handleDelete(): Promise<void> {
 		if (
-			!confirm(
-				`Delete ${data.teamName}? This permanently deletes the team and all of its seasons.`
-			)
+			!confirm(`Delete ${data.teamName}? This permanently deletes the team and all of its seasons.`)
 		) {
 			return;
 		}
@@ -69,7 +67,7 @@
 				teamSlug: data.teamSlug,
 				name: seasonName,
 				startDate: startDate === '' ? undefined : startDate,
-				endDate: endDate === '' ? undefined : endDate
+				endDate: endDate === '' ? undefined : endDate,
 			});
 			seasonName = '';
 			startDate = '';
@@ -122,16 +120,14 @@
 							<a
 								href={resolve('/teams/[team_slug]/seasons/[season_slug]', {
 									team_slug: data.teamSlug,
-									season_slug: season.slug
+									season_slug: season.slug,
 								})}
 							>
 								{season.name}
 							</a>
 							{#if season.startDate !== '' || season.endDate !== ''}
 								<span class="muted season-dates">
-									{season.startDate}{season.endDate === ''
-										? ''
-										: ` – ${season.endDate}`}
+									{season.startDate}{season.endDate === '' ? '' : ` – ${season.endDate}`}
 								</span>
 							{/if}
 						</li>

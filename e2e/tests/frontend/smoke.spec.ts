@@ -16,9 +16,7 @@ test('renders the client app shell', async ({ page }) => {
 	const response = await page.goto('/');
 
 	expect(response?.status()).toBe(200);
-	await expect(
-		page.getByRole('button', { name: /Switch to (light|dark) theme/ })
-	).toBeVisible();
+	await expect(page.getByRole('button', { name: /Switch to (light|dark) theme/ })).toBeVisible();
 	await expect(page.getByRole('heading', { name: 'My Bad, Coach' })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Register' })).toBeVisible();
@@ -43,7 +41,7 @@ test('mints a real session cookie that Me honors', async ({ playwright }) => {
 	try {
 		const email = `smoke-${String(Date.now())}@mybadcoach.dev`;
 		const registered = await api.post(`/${AUTH}/Register`, {
-			data: { email, password: 'password123', name: 'Smoke Tester' }
+			data: { email, password: 'password123', name: 'Smoke Tester' },
 		});
 
 		expect(registered.status()).toBe(200);

@@ -33,13 +33,13 @@ export function connectError(
 	code: Code,
 	machineCode: string,
 	message: string,
-	violations: FieldViolationInput[] = []
+	violations: FieldViolationInput[] = [],
 ): ConnectError {
 	return new ConnectError(message, code, undefined, [
 		{
 			desc: ErrorDetailSchema,
-			value: create(ErrorDetailSchema, { code: machineCode, fieldViolations: violations })
-		}
+			value: create(ErrorDetailSchema, { code: machineCode, fieldViolations: violations }),
+		},
 	]);
 }
 
@@ -54,7 +54,7 @@ function validEmail(email: string): boolean {
 function validateRegistration(
 	email: string,
 	name: string,
-	password: string
+	password: string,
 ): FieldViolationInput[] {
 	const violations: FieldViolationInput[] = [];
 	if (!validEmail(email)) {
@@ -96,7 +96,7 @@ function sessionCookie(token: string, expiresAt: number): string {
 		'HttpOnly',
 		'SameSite=Lax',
 		`Max-Age=${SESSION_MAX_AGE_SECONDS}`,
-		`Expires=${new Date(expiresAt).toUTCString()}`
+		`Expires=${new Date(expiresAt).toUTCString()}`,
 	];
 	return attributes.join('; ');
 }
@@ -108,7 +108,7 @@ function clearedSessionCookie(): string {
 		'HttpOnly',
 		'SameSite=Lax',
 		'Max-Age=0',
-		'Expires=Thu, 01 Jan 1970 00:00:00 GMT'
+		'Expires=Thu, 01 Jan 1970 00:00:00 GMT',
 	].join('; ');
 }
 
@@ -118,11 +118,7 @@ function issueSession(store: FakeStore, context: HandlerContext, userId: string)
 }
 
 function invalidCredentials(): ConnectError {
-	return connectError(
-		Code.Unauthenticated,
-		'invalid_credentials',
-		'invalid email or password'
-	);
+	return connectError(Code.Unauthenticated, 'invalid_credentials', 'invalid email or password');
 }
 
 export function sessionExpired(): ConnectError {
@@ -158,7 +154,7 @@ export function createAuthImplementation(store: FakeStore): AuthImplementation {
 					Code.InvalidArgument,
 					'invalid_argument',
 					'invalid registration',
-					violations
+					violations,
 				);
 			}
 			if (store.findUserByEmail(email) !== undefined) {
@@ -195,6 +191,6 @@ export function createAuthImplementation(store: FakeStore): AuthImplementation {
 				throw sessionExpired();
 			}
 			return { user: userMessage(user) };
-		}
+		},
 	};
 }
