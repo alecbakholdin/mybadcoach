@@ -14,7 +14,23 @@ Alec on 2026-10-23.
 | Package | Version | Scope | Purpose | New |
 | --- | --- | --- | --- | --- |
 | `@playwright/test` | `1.64.1` | `e2e` (independent package) | Browser + HTTP driver for the full-stack smoke. | **approved 2026-10-23** |
+| `eslint` | `10.13.0` | root (shared by all workspaces) | Linter engine for the strict TypeScript/Svelte gate. | **approved 2026-10-24** |
+| `@eslint/js` | `10.0.1` | root | ESLint's core recommended rule set. | **approved 2026-10-24** |
+| `typescript-eslint` | `8.72.0` | root | Type-aware parser/plugin; `strict-type-checked` preset via project service. | **approved 2026-10-24** |
+| `eslint-plugin-svelte` | `3.23.1` | root | Svelte parser integration + `recommended` rules (Svelte 5 runes mode). | **approved 2026-10-24** |
+| `svelte-eslint-parser` | `1.10.0` | root | Direct Svelte parser dependency required by the typed config. | **approved 2026-10-24** |
+| `eslint-plugin-playwright` | `2.12.1` | root | Playwright `recommended` rules for `e2e/**` specs. | **approved 2026-10-24** |
+| `eslint-plugin-import-x` | `4.17.1` | root | Import sorting/grouping (builtins, external, internal aliases, relative). | **approved 2026-10-24** |
+| `globals` | `17.13.0` | root | Browser/Node global sets for the flat config. | **approved 2026-10-24** |
 | `@sveltejs/adapter-static` | `^4.0.0` | `apps/client` (devDependency) | SvelteKit build adapter: emits the client as a static SPA the Go server `go:embed`s and serves. | **approved 2026-10-24** |
+
+The ESLint set is the "standard set" Alec approved on 2026-10-24. `import-x` was chosen
+over the unmaintained `eslint-plugin-import`; module resolution stays with TypeScript/Vite
+(`import-x/no-unresolved` is off), so no extra resolver package is needed. The root
+`typescript` pin (`6.0.3`) is not a new dependency: it is the already-approved TypeScript,
+pinned at the root because `typescript-eslint@8.72.0` supports `<6.1`, while
+`packages/shared` keeps its own TypeScript 7 for `tsc --noEmit`. `@connectrpc/connect-node`
+for the stub server was already approved with the backend set.
 
 Alternatives considered for the e2e driver: Puppeteer (smaller but no test
 runner or API-request fixtures), Cypress (heavier, no first-class API-only

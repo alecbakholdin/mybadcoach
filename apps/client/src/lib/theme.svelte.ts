@@ -34,7 +34,7 @@ export const theme = {
 	get current(): Theme {
 		return current;
 	},
-	toggle(): void {
+	toggle: (): void => {
 		apply(current === 'dark' ? 'light' : 'dark');
 	}
 };

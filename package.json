@@ -2,6 +2,7 @@
   "name": "mybadcoach",
   "version": "0.0.0",
   "private": true,
+  "type": "module",
   "description": "Real-time, collaborative, offline-first Ultimate Frisbee live stat tracker",
   "workspaces": [
     "packages/*",
@@ -23,6 +24,18 @@
     "dev:client": "npm run dev -w apps/client",
     "build:client": "npm run build -w apps/client",
     "verify:rules": "bash scripts/verify-usau-rules-md.sh",
-    "verify:client": "bash scripts/verify-client-skeleton.sh"
+    "verify:client": "bash scripts/verify-client-skeleton.sh",
+    "test:integration:frontend": "npm test --prefix e2e -- --config=playwright.frontend.config.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.13.0",
+    "eslint-plugin-import-x": "4.17.1",
+    "eslint-plugin-playwright": "2.12.1",
+    "eslint-plugin-svelte": "3.23.1",
+    "globals": "17.13.0",
+    "svelte-eslint-parser": "1.10.0",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.72.0"
   }
 }
