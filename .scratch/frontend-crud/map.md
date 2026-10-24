@@ -41,6 +41,11 @@ Playwright CRUD e2e) so nothing ships untested.
   `@sveltejs/adapter-static` (`fallback: 'index.html'`, `ssr=false`), `server/web` embeds and serves
   the SPA with client-side-route fallback, dev proxy forwards `/mybadcoach` → `:8080`, and
   `npm run build` produces the single binary.
+- [Apply the Night-game design tokens](issues/03-design-tokens-applied.md): `app.css` ports the locked
+  token system verbatim; Sora self-hosted as subset woff2 (`@font-face`, variable 600–800, no runtime
+  CDN); `+layout.svelte` + `src/lib/theme.svelte.ts` (rune) wire `data-theme` light/dark switching with
+  a no-flash pre-paint script; `server/web` adds immutable cache headers for `_app/immutable/` and
+  `fonts/`.
 
 ## Not yet specified
 
