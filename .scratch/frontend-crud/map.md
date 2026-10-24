@@ -53,6 +53,12 @@ Playwright CRUD e2e) so nothing ships untested.
   reachable same-origin via the Vite preview proxy; a Playwright frontend smoke in `e2e/`
   (`npm run test:integration:frontend`). Codegen note: `proto/buf.gen.yaml` now emits
   `import_extension=.ts,erasable_syntax=true` so the generated `_pb.ts` runs under Node's native TS.
+- [Build the auth screens and protected routing](issues/05-auth-screens.md): the settled data layer
+  (`src/lib/api/` — one same-origin Connect transport + unconditional CSRF interceptor + six typed
+  clients + a shared `unauthenticated` handler), `src/lib/session.svelte.ts` rune module hydrated by
+  `Me()`, hero + login + register + a minimal protected `/teams` placeholder, and a root-layout `Me()`
+  gate (public: `/`, `/login`, `/register`). Vite dev/preview proxies now set `changeOrigin: false` so
+  the same-origin CSRF check passes on mutating RPCs.
 
 ## Not yet specified
 
