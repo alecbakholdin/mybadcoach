@@ -17,8 +17,12 @@ export default defineConfig({
 	],
 	server: {
 		// Dev: forward Connect-RPC calls to the Go server on its default port.
+		// `changeOrigin: false` preserves the browser's Host header so the
+		// server's same-origin CSRF check (Origin vs Host) still matches; the
+		// string shorthand would rewrite Host to the target and reject every
+		// mutating RPC.
 		proxy: {
-			'/mybadcoach': 'http://localhost:8080'
+			'/mybadcoach': { target: 'http://localhost:8080', changeOrigin: false }
 		}
 	},
 	preview: {
@@ -27,9 +31,10 @@ export default defineConfig({
 		allowedHosts: ['client'],
 		// Frontend-only integration seam: the SPA's Connect transport stays
 		// same-origin (`baseUrl: '/'`), so preview forwards RPCs to the stub
-		// Connect server, just as dev forwards them to the Go server.
+		// Connect server, just as dev forwards them to the Go server. The Host
+		// header is preserved for the same CSRF reason as `server.proxy`.
 		proxy: {
-			'/mybadcoach': 'http://127.0.0.1:4174'
+			'/mybadcoach': { target: 'http://127.0.0.1:4174', changeOrigin: false }
 		}
 	},
 	resolve: {

@@ -18,7 +18,9 @@ test('renders the client app shell', async ({ page }) => {
 	await expect(
 		page.getByRole('button', { name: /Switch to (light|dark) theme/ })
 	).toBeVisible();
-	await expect(page.locator('body')).toContainText('Initial view:');
+	await expect(page.getByRole('heading', { name: 'My Bad, Coach' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
+	await expect(page.getByRole('link', { name: 'Register' })).toBeVisible();
 });
 
 test('serves Connect unauthenticated for Me without a session', async ({ playwright }) => {
