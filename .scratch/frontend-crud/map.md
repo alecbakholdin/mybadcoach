@@ -59,6 +59,11 @@ Playwright CRUD e2e) so nothing ships untested.
   `Me()`, hero + login + register + a minimal protected `/teams` placeholder, and a root-layout `Me()`
   gate (public: `/`, `/login`, `/register`). Vite dev/preview proxies now set `changeOrigin: false` so
   the same-origin CSRF check passes on mutating RPCs.
+- [Build the team + season CRUD screens](issues/06-team-season-crud.md): `/teams` (ListMyTeams + create
+  + role badge), `/teams/[team_slug]` (rename/delete owner-gated + season list/create), and
+  `/teams/[team_slug]/seasons/[season_slug]` (edit + owner-gated delete + read-only roster). Route
+  loaders await `session.load()` and short-circuit to empty data when signed out. The stub gained
+  TeamService + SeasonService over an in-memory store with owner gating + slug generation.
 
 ## Not yet specified
 
