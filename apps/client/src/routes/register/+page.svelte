@@ -3,7 +3,8 @@
 	import { resolve } from '$app/paths';
 
 	import { auth } from '#lib/api';
-	import { fieldErrorsOf, machineCodeOf } from '#lib/api/errors';
+	import { machineCodeOf } from '#lib/api/errors';
+	import { formErrorOf } from '#lib/forms';
 	import { session } from '#lib/session.svelte';
 
 	let name = $state('');
@@ -28,12 +29,9 @@
 			if (machineCodeOf(error) === 'email_taken') {
 				errorMessage = 'That email is already registered.';
 			} else {
-				const violations = fieldErrorsOf(error);
-				if (Object.keys(violations).length > 0) {
-					fieldErrors = violations;
-				} else {
-					errorMessage = 'Could not create your account. Please try again.';
-				}
+				const outcome = formErrorOf(error, 'Could not create your account. Please try again.');
+				fieldErrors = outcome.fieldErrors;
+				errorMessage = outcome.message;
 			}
 		} finally {
 			submitting = false;

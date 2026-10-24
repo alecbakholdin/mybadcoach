@@ -3,7 +3,9 @@
 	import { resolve } from '$app/paths';
 
 	import { events as eventClient, seasons as seasonClient } from '#lib/api';
-	import { fieldErrorsOf } from '#lib/api/errors';
+	import { formErrorOf } from '#lib/forms';
+	import { displayName } from '#lib/players';
+	import RoleBadge from '#lib/RoleBadge.svelte';
 	import type { SeasonDetailData } from '#lib/structure-data';
 	import type { Event } from '$shared/gen/mybadcoach/events/v1/events_pb';
 
@@ -69,12 +71,9 @@
 			eventLocation = '';
 			await refreshAll();
 		} catch (error) {
-			const violations = fieldErrorsOf(error);
-			if (Object.keys(violations).length > 0) {
-				eventFieldErrors = violations;
-			} else {
-				eventError = 'Could not create the event.';
-			}
+			const outcome = formErrorOf(error, 'Could not create the event.');
+			eventFieldErrors = outcome.fieldErrors;
+			eventError = outcome.message;
 		} finally {
 			creatingEvent = false;
 		}
@@ -90,17 +89,16 @@
 				teamSlug: data.teamSlug,
 				seasonSlug: data.seasonSlug,
 				name: editName,
-				startDate: editStart === '' ? undefined : editStart,
-				endDate: editEnd === '' ? undefined : editEnd
+				// An empty string is present-on-the-wire and clears the column;
+				// `undefined` would mean "leave unchanged".
+				startDate: editStart,
+				endDate: editEnd
 			});
 			await refreshAll();
 		} catch (error) {
-			const violations = fieldErrorsOf(error);
-			if (Object.keys(violations).length > 0) {
-				fieldErrors = violations;
-			} else {
-				saveError = 'Could not save the season.';
-			}
+			const outcome = formErrorOf(error, 'Could not save the season.');
+			fieldErrors = outcome.fieldErrors;
+			saveError = outcome.message;
 		} finally {
 			saving = false;
 		}
@@ -186,7 +184,7 @@
 	{:else}
 		<div class="page-head">
 			<h1>{data.season.name}</h1>
-			<span class="badge" class:badge-owner={isOwner}>{isOwner ? 'Owner' : 'Member'}</span>
+			<RoleBadge role={data.role} />
 		</div>
 
 		<section class="card section-card">
@@ -300,7 +298,7 @@
 				<ul class="item-list" aria-label="Season roster">
 					{#each data.roster as player (player.slug)}
 						<li class="item-row">
-							<span>{player.names[0] ?? player.slug}</span>
+							<span>{displayName(player)}</span>
 							<button
 								class="btn btn-secondary roster-remove"
 								type="button"
@@ -333,7 +331,7 @@
 						<select id="add-season-roster-player" bind:value={selectedPlayerSlug}>
 							<option value="">Select a player</option>
 							{#each availablePlayers as player (player.slug)}
-								<option value={player.slug}>{player.names[0] ?? player.slug}</option>
+								<option value={player.slug}>{displayName(player)}</option>
 							{/each}
 						</select>
 					</div>

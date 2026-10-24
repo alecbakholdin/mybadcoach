@@ -3,7 +3,8 @@
 	import { resolve } from '$app/paths';
 
 	import { seasons as seasonClient, teams } from '#lib/api';
-	import { fieldErrorsOf } from '#lib/api/errors';
+	import { formErrorOf } from '#lib/forms';
+	import RoleBadge from '#lib/RoleBadge.svelte';
 	import type { TeamDetailData } from '#lib/structure-data';
 
 	let { data }: { data: TeamDetailData } = $props();
@@ -75,12 +76,9 @@
 			endDate = '';
 			await refreshAll();
 		} catch (error) {
-			const violations = fieldErrorsOf(error);
-			if (Object.keys(violations).length > 0) {
-				seasonFieldErrors = violations;
-			} else {
-				seasonError = 'Could not create the season.';
-			}
+			const outcome = formErrorOf(error, 'Could not create the season.');
+			seasonFieldErrors = outcome.fieldErrors;
+			seasonError = outcome.message;
 		} finally {
 			creatingSeason = false;
 		}
@@ -109,7 +107,7 @@
 				>
 					Players
 				</a>
-				<span class="badge" class:badge-owner={isOwner}>{isOwner ? 'Owner' : 'Member'}</span>
+				<RoleBadge role={data.role} />
 			</div>
 		</div>
 

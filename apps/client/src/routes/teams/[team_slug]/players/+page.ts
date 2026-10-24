@@ -1,6 +1,6 @@
 import { players, teams } from '#lib/api';
 import { session } from '#lib/session.svelte';
-import type { PlayerListData } from '#lib/structure-data';
+import { teamRoleOf, type PlayerListData } from '#lib/structure-data';
 
 // Players are scoped to a team; the membership role gates owner-only deletion
 // in the UI, while any member may create and edit players.
@@ -13,7 +13,7 @@ export const load = async ({
 	const empty = (): PlayerListData => ({
 		teamSlug,
 		teamName: '',
-		role: '',
+		role: 'member',
 		players: [],
 		playersTotal: 0
 	});
@@ -30,7 +30,7 @@ export const load = async ({
 	return {
 		teamSlug,
 		teamName: membership.team.name,
-		role: membership.role,
+		role: teamRoleOf(membership.role),
 		players: response.players,
 		playersTotal: Number(response.total)
 	};

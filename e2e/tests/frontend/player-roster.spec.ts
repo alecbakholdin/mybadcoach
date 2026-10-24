@@ -1,52 +1,31 @@
-import { expect, test, type Page, type PlaywrightWorkerArgs } from '@playwright/test';
+import { expect, test, type PlaywrightWorkerArgs } from '@playwright/test';
+
+import {
+	acceptNextDialog,
+	connectContext,
+	createSeasonThroughUi,
+	createTeamThroughUi,
+	loginThroughUi,
+	PASSWORD,
+	registerThroughUi,
+	STUB_URL
+} from './helpers';
 
 // Frontend-only player + roster seam (ticket 08): the real SvelteKit build runs
 // against the stub Connect server, whose PlayerService and roster RPCs mirror
 // the server contract (team-scoped slugs, idempotent roster adds, hard deletes,
 // owner-only player deletion, member-gated roster mutations). Every case starts
 // from an empty fake store.
-const STUB_URL = 'http://127.0.0.1:4174';
 const AUTH = 'mybadcoach.auth.v1.AuthService';
 const TEAMS = 'mybadcoach.teams.v1.TeamService';
 const PLAYERS = 'mybadcoach.players.v1.PlayerService';
 const SEASONS = 'mybadcoach.seasons.v1.SeasonService';
 const EVENTS = 'mybadcoach.events.v1.EventService';
 
-const PASSWORD = 'password123';
-const CSRF = { 'X-Requested-With': 'XMLHttpRequest' };
-
 test.beforeEach(async ({ request }) => {
 	const reset = await request.post(`${STUB_URL}/__test/reset`);
 	expect(reset.ok()).toBe(true);
 });
-
-async function registerThroughUi(page: Page, name: string, email: string): Promise<void> {
-	await page.goto('/register');
-	await page.getByLabel('Name', { exact: true }).fill(name);
-	await page.getByLabel('Email', { exact: true }).fill(email);
-	await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
-	await page.getByRole('button', { name: 'Register', exact: true }).click();
-	await expect(page).toHaveURL(/\/teams$/);
-}
-
-async function createTeamThroughUi(page: Page, name: string): Promise<void> {
-	await page.goto('/teams');
-	await page.getByLabel('Team name', { exact: true }).fill(name);
-	await page.getByRole('button', { name: 'Create team', exact: true }).click();
-	await expect(page).toHaveURL(/\/teams\/fleet-foxes$/);
-}
-
-async function createSeasonThroughUi(page: Page, name: string): Promise<void> {
-	await page.getByLabel('Season name', { exact: true }).fill(name);
-	await page.getByRole('button', { name: 'Create season', exact: true }).click();
-	await expect(page.getByRole('link', { name, exact: true })).toBeVisible();
-}
-
-function acceptNextDialog(page: Page): void {
-	page.once('dialog', (dialog) => {
-		void dialog.accept();
-	});
-}
 
 test('creates, edits, rosters, and deletes a player', async ({ page }) => {
 	await registerThroughUi(page, 'Casey Coach', 'casey@example.com');
@@ -146,10 +125,7 @@ interface SeededPlayer {
 async function seedMemberWithPlayer(
 	playwright: PlaywrightWorkerArgs['playwright']
 ): Promise<SeededPlayer> {
-	const ownerApi = await playwright.request.newContext({
-		baseURL: STUB_URL,
-		extraHTTPHeaders: CSRF
-	});
+	const ownerApi = await connectContext(playwright);
 	try {
 		const registered = await ownerApi.post(`/${AUTH}/Register`, {
 			data: { email: 'owner@example.com', password: PASSWORD, name: 'Owner One' }
@@ -188,10 +164,7 @@ async function seedMemberWithPlayer(
 			((await createdEvent.json()) as { event?: { slug?: string } }).event?.slug ?? '';
 		expect(eventSlug).toBe('summer-classic');
 
-		const memberApi = await playwright.request.newContext({
-			baseURL: STUB_URL,
-			extraHTTPHeaders: CSRF
-		});
+		const memberApi = await connectContext(playwright);
 		try {
 			const memberRegistered = await memberApi.post(`/${AUTH}/Register`, {
 				data: { email: 'member@example.com', password: PASSWORD, name: 'Member Two' }
@@ -225,11 +198,7 @@ test('lets a non-owner member manage rosters but not delete players', async ({
 }) => {
 	const { teamSlug, seasonSlug, eventSlug } = await seedMemberWithPlayer(playwright);
 
-	await page.goto('/login');
-	await page.getByLabel('Email', { exact: true }).fill('member@example.com');
-	await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
-	await page.getByRole('button', { name: 'Log in', exact: true }).click();
-	await expect(page).toHaveURL(/\/teams$/);
+	await loginThroughUi(page, 'member@example.com');
 
 	// Members may create and edit players, but not delete them.
 	await page.goto(`/teams/${teamSlug}/players`);

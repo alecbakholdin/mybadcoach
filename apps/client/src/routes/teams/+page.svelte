@@ -3,8 +3,9 @@
 	import { resolve } from '$app/paths';
 
 	import { teams } from '#lib/api';
-	import { fieldErrorsOf } from '#lib/api/errors';
-	import type { TeamListData } from '#lib/structure-data';
+	import { formErrorOf } from '#lib/forms';
+	import RoleBadge from '#lib/RoleBadge.svelte';
+	import { teamRoleOf, type TeamListData } from '#lib/structure-data';
 
 	let { data }: { data: TeamListData } = $props();
 
@@ -26,12 +27,9 @@
 			}
 			await goto(resolve('/teams/[team_slug]', { team_slug: response.team.slug }));
 		} catch (error) {
-			const violations = fieldErrorsOf(error);
-			if (Object.keys(violations).length > 0) {
-				fieldErrors = violations;
-			} else {
-				errorMessage = 'Could not create the team. Please try again.';
-			}
+			const outcome = formErrorOf(error, 'Could not create the team. Please try again.');
+			fieldErrors = outcome.fieldErrors;
+			errorMessage = outcome.message;
 		} finally {
 			submitting = false;
 		}
@@ -57,9 +55,7 @@
 						<a href={resolve('/teams/[team_slug]', { team_slug: membership.team.slug })}>
 							{membership.team.name}
 						</a>
-						<span class="badge" class:badge-owner={membership.role === 'owner'}>
-							{membership.role === 'owner' ? 'Owner' : 'Member'}
-						</span>
+						<RoleBadge role={teamRoleOf(membership.role)} />
 					</li>
 				{/if}
 			{/each}

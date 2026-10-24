@@ -3,7 +3,8 @@
 	import { resolve } from '$app/paths';
 
 	import { events as eventClient, matches as matchClient } from '#lib/api';
-	import { fieldErrorsOf } from '#lib/api/errors';
+	import { formErrorOf } from '#lib/forms';
+	import { displayName } from '#lib/players';
 	import type { EventDetailData } from '#lib/structure-data';
 
 	let { data }: { data: EventDetailData } = $props();
@@ -104,12 +105,9 @@
 			});
 			await refreshAll();
 		} catch (error) {
-			const violations = fieldErrorsOf(error);
-			if (Object.keys(violations).length > 0) {
-				fieldErrors = violations;
-			} else {
-				saveError = 'Could not save the event.';
-			}
+			const outcome = formErrorOf(error, 'Could not save the event.');
+			fieldErrors = outcome.fieldErrors;
+			saveError = outcome.message;
 		} finally {
 			saving = false;
 		}
@@ -163,12 +161,9 @@
 			pointCap = '';
 			await refreshAll();
 		} catch (error) {
-			const violations = fieldErrorsOf(error);
-			if (Object.keys(violations).length > 0) {
-				matchFieldErrors = violations;
-			} else {
-				matchError = 'Could not create the match.';
-			}
+			const outcome = formErrorOf(error, 'Could not create the match.');
+			matchFieldErrors = outcome.fieldErrors;
+			matchError = outcome.message;
 		} finally {
 			creatingMatch = false;
 		}
@@ -317,7 +312,7 @@
 				<ul class="item-list" aria-label="Event roster">
 					{#each data.roster as player (player.slug)}
 						<li class="item-row">
-							<span>{player.names[0] ?? player.slug}</span>
+							<span>{displayName(player)}</span>
 							<button
 								class="btn btn-secondary roster-remove"
 								type="button"
@@ -350,7 +345,7 @@
 						<select id="add-event-roster-player" bind:value={selectedPlayerSlug}>
 							<option value="">Select a player</option>
 							{#each availablePlayers as player (player.slug)}
-								<option value={player.slug}>{player.names[0] ?? player.slug}</option>
+								<option value={player.slug}>{displayName(player)}</option>
 							{/each}
 						</select>
 					</div>

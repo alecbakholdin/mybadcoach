@@ -4,11 +4,14 @@ import {
 	seasons as seasonClient,
 	teams
 } from '#lib/api';
+import { undefinedIfNotFound } from '#lib/api/errors';
 import { session } from '#lib/session.svelte';
-import type { SeasonDetailData } from '#lib/structure-data';
+import { teamRoleOf, type SeasonDetailData } from '#lib/structure-data';
 
 // The membership role gates `DeleteSeason` in the UI; the season, its events,
 // and its roster load together because this screen always shows all three.
+// A stale link maps to the screen's own not-found state instead of an error
+// page, matching the event and match loaders.
 export const load = async ({
 	params
 }: {
@@ -20,7 +23,7 @@ export const load = async ({
 			teamSlug,
 			seasonSlug,
 			teamName: '',
-			role: '',
+			role: 'member',
 			season: undefined,
 			events: [],
 			eventsTotal: 0,
@@ -36,7 +39,7 @@ export const load = async ({
 			teamSlug,
 			seasonSlug,
 			teamName: '',
-			role: '',
+			role: 'member',
 			season: undefined,
 			events: [],
 			eventsTotal: 0,
@@ -47,21 +50,23 @@ export const load = async ({
 	}
 
 	const [seasonResponse, eventResponse, rosterResponse, playerResponse] = await Promise.all([
-		seasonClient.getSeason({ teamSlug, seasonSlug }),
-		eventClient.listEvents({ teamSlug, seasonSlug, offset: 0, limit: 100 }),
-		seasonClient.listSeasonRoster({ teamSlug, seasonSlug, offset: 0, limit: 100 }),
+		undefinedIfNotFound(seasonClient.getSeason({ teamSlug, seasonSlug })),
+		undefinedIfNotFound(eventClient.listEvents({ teamSlug, seasonSlug, offset: 0, limit: 100 })),
+		undefinedIfNotFound(
+			seasonClient.listSeasonRoster({ teamSlug, seasonSlug, offset: 0, limit: 100 })
+		),
 		playerClient.listPlayers({ teamSlug, offset: 0, limit: 100 })
 	]);
 	return {
 		teamSlug,
 		seasonSlug,
 		teamName: membership.team.name,
-		role: membership.role,
-		season: seasonResponse.season,
-		events: eventResponse.events,
-		eventsTotal: Number(eventResponse.total),
-		roster: rosterResponse.players,
-		rosterTotal: Number(rosterResponse.total),
+		role: teamRoleOf(membership.role),
+		season: seasonResponse?.season,
+		events: eventResponse?.events ?? [],
+		eventsTotal: Number(eventResponse?.total ?? 0n),
+		roster: rosterResponse?.players ?? [],
+		rosterTotal: Number(rosterResponse?.total ?? 0n),
 		teamPlayers: playerResponse.players
 	};
 };
