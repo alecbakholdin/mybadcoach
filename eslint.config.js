@@ -53,6 +53,12 @@ export default tseslint.config(
 			'**/node_modules/**',
 			'**/dist/**',
 			'**/build/**',
+			// The Go server embeds the client build here (populated by
+			// scripts/copy-client-build.sh); it is build output, not source.
+			'server/web/static/**',
+			// Claude Code's own harness directory (agent worktrees, settings) —
+			// never application source.
+			'.claude/**',
 			'**/.svelte-kit/**',
 			'**/coverage/**',
 			'**/test-results/**',
