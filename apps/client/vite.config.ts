@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-auto';
+import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import { fileURLToPath } from 'node:url';
@@ -7,10 +7,19 @@ import { defineConfig } from 'vite';
 export default defineConfig({
 	plugins: [
 		sveltekit({
-			adapter: adapter(),
+			adapter: adapter({
+				// SPA: every client-side route falls back to the index.html shell.
+				fallback: 'index.html'
+			}),
 			preprocess: vitePreprocess()
 		})
 	],
+	server: {
+		// Dev: forward Connect-RPC calls to the Go server on its default port.
+		proxy: {
+			'/mybadcoach': 'http://localhost:8080'
+		}
+	},
 	preview: {
 		// The production client is served inside the compose network as
 		// `client`; Vite's DNS-rebinding host check must allow that name.

@@ -37,11 +37,18 @@ Playwright CRUD e2e) so nothing ships untested.
   Connect transport + per-service clients in `src/lib/api/`; CSRF via an unconditional `X-Requested-With`
   interceptor; session as a Svelte 5 rune module hydrated by `Me()`; root `+layout.ts` gate with public
   routes `/`, `/login`, `/register`; shared `unauthenticated` → clear + redirect handler.
+- [Wire adapter-static + go:embed serving + Vite dev proxy](issues/02-static-serving-plumbing.md):
+  `@sveltejs/adapter-static` (`fallback: 'index.html'`, `ssr=false`), `server/web` embeds and serves
+  the SPA with client-side-route fallback, dev proxy forwards `/mybadcoach` → `:8080`, and
+  `npm run build` produces the single binary.
 
 ## Not yet specified
 
 - Membership management (list / change-role / remove members) and member invites by email — not in
   the confirmed CRUD list; revisit once the core CRUD screens land.
+- Container-stack consolidation — docker-compose still runs a separate `client` `vite preview` service;
+  fold the SPA into the Go server's single origin and point the e2e at `server:8080` (with the
+  testing-seam work).
 
 ## Out of scope
 

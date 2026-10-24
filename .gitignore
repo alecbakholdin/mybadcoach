@@ -41,8 +41,14 @@ mbc.db-wal
 node_modules/
 dist/
 .svelte-kit/
+apps/client/build/
 *.tsbuildinfo
 coverage/
+
+# Go-embedded SvelteKit build output (populated by scripts/copy-client-build.sh).
+# The tracked .gitkeep keeps the embed non-empty so `go build` works fresh.
+server/web/static/*
+!server/web/static/.gitkeep
 
 # Playwright (e2e)
 test-results/

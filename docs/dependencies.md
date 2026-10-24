@@ -14,6 +14,7 @@ Alec on 2026-10-23.
 | Package | Version | Scope | Purpose | New |
 | --- | --- | --- | --- | --- |
 | `@playwright/test` | `1.64.1` | `e2e` (independent package) | Browser + HTTP driver for the full-stack smoke. | **approved 2026-10-23** |
+| `@sveltejs/adapter-static` | `^4.0.0` | `apps/client` (devDependency) | SvelteKit build adapter: emits the client as a static SPA the Go server `go:embed`s and serves. | **approved 2026-10-24** |
 
 Alternatives considered for the e2e driver: Puppeteer (smaller but no test
 runner or API-request fixtures), Cypress (heavier, no first-class API-only
