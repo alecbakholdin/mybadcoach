@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - "integration/**"
   pull_request:
 
 permissions:
@@ -49,6 +48,7 @@ jobs:
           node-version: "22.22"
           cache: npm
       - run: npm ci
+      - run: npm ci --prefix e2e
       - run: bash scripts/lint.sh eslint
 
   test-shared:

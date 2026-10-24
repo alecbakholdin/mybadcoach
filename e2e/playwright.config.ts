@@ -5,6 +5,9 @@ import { defineConfig } from '@playwright/test';
 // the suite outside the composed network (e.g. against a local server).
 export default defineConfig({
 	testDir: './tests',
+	// The frontend-only seam runs against the stub Connect server under its own
+	// config (`playwright.frontend.config.ts`); the full-stack suite excludes it.
+	testIgnore: ['**/frontend/**'],
 	fullyParallel: false,
 	workers: 1,
 	retries: 0,

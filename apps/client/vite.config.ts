@@ -31,10 +31,11 @@ export default defineConfig({
 		allowedHosts: ['client'],
 		// Frontend-only integration seam: the SPA's Connect transport stays
 		// same-origin (`baseUrl: '/'`), so preview forwards RPCs to the stub
-		// Connect server, just as dev forwards them to the Go server. The Host
+		// Connect server by default; the compose stack overrides the target via
+		// MBC_PROXY_TARGET to reach the real Go server. The Host
 		// header is preserved for the same CSRF reason as `server.proxy`.
 		proxy: {
-			'/mybadcoach': { target: 'http://127.0.0.1:4174', changeOrigin: false }
+			'/mybadcoach': { target: process.env.MBC_PROXY_TARGET ?? 'http://127.0.0.1:4174', changeOrigin: false }
 		}
 	},
 	resolve: {

@@ -294,7 +294,7 @@ test('full-stack smoke: auth, structure CRUD, live gameplay, folded state, and s
 		// The real SvelteKit client builds and serves alongside the server.
 		const response = await page.goto(CLIENT_URL);
 		expect(response?.status()).toBe(200);
-		await expect(page.locator('body')).toContainText('Initial view:');
+		await expect(page.getByRole('heading', { name: 'My Bad, Coach' })).toBeVisible();
 	} finally {
 		await api.dispose();
 	}
