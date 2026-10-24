@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Bad, Coach — design tokens</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  /* Direction: Night game look — Sora, dark-first, cool neutrals, warm amber, flat. */
+  :root {
+    color-scheme: dark;
+    --backdrop: #0B0D12;
+    --surface: #151822;
+    --surface-raised: #1B1F2B;
+    --ink: #ECEEF4;
+    --muted: #8A90A0;
+    --hairline: rgba(236, 238, 244, .14);
+    --primary: #F5B74A;
+    --primary-strong: #FFC761;
+    --on-primary: #14171F;
+    --success: #4FB27D;
+    --success-tint: rgba(79, 178, 125, .16);
+    --warning: #F0A438;
+    --warning-tint: rgba(240, 164, 56, .16);
+    --error: #E06862;
+    --error-tint: rgba(224, 104, 98, .16);
+    --radius: 10px;
+  }
+
+  :root[data-theme='light'] {
+    color-scheme: light;
+    --backdrop: #F2F3F7;
+    --surface: #FFFFFF;
+    --surface-raised: #E9ECF2;
+    --ink: #14171F;
+    --muted: #5C6370;
+    --hairline: rgba(20, 23, 31, .12);
+    --primary: #B47A1F;
+    --primary-strong: #9A6614;
+    --on-primary: #14171F;
+    --success: #2F8B4F;
+    --success-tint: rgba(47, 139, 79, .12);
+    --warning: #D97706;
+    --warning-tint: rgba(217, 119, 6, .12);
+    --error: #C2413B;
+    --error-tint: rgba(194, 65, 59, .12);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--backdrop);
+    color: var(--ink);
+    font-family: 'Sora', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    font-weight: 600;
+    line-height: 1.5;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 40px 20px 64px;
+  }
+
+  .mast { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+  h1 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -.01em; }
+  .lede { margin: 6px 0 0; color: var(--muted); font-size: 13px; max-width: 44ch; }
+
+  .theme-toggle {
+    appearance: none; cursor: pointer;
+    flex: none; min-width: 76px; height: 36px; padding: 0 14px;
+    background: var(--surface); color: var(--ink);
+    border: 1px solid var(--hairline); border-radius: var(--radius);
+    font: inherit; font-size: 12.5px; font-weight: 600;
+  }
+  .theme-toggle:hover { border-color: var(--muted); }
+  .theme-toggle:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  section { margin-top: 44px; }
+  h2 { margin: 0; font-size: 15px; font-weight: 800; letter-spacing: -.005em; }
+  .sec-note { margin: 4px 0 16px; color: var(--muted); font-size: 12.5px; max-width: 52ch; }
+
+  /* Buttons */
+  .btn-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .btn {
+    appearance: none; cursor: pointer;
+    min-height: 46px; padding: 0 20px;
+    border-radius: var(--radius);
+    font: inherit; font-size: 14px; font-weight: 600; line-height: 1;
+  }
+  .btn-primary { background: var(--primary); color: var(--on-primary); border: 0; }
+  .btn-primary:hover { background: var(--primary-strong); }
+  .btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--hairline); }
+  .btn-secondary:hover { border-color: var(--muted); }
+  .btn-tertiary { background: transparent; color: var(--muted); border: 0; padding: 0 12px; }
+  .btn-tertiary:hover { color: var(--ink); }
+  .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .btn-tag { color: var(--muted); font-size: 12px; font-weight: 600; }
+
+  /* Color palette */
+  .group { margin-top: 28px; }
+  .group h3 { margin: 0 0 10px; font-size: 12.5px; font-weight: 800; color: var(--muted); letter-spacing: .01em; }
+  .token {
+    display: grid;
+    grid-template-columns: 132px 1fr 1fr;
+    gap: 12px;
+    align-items: center;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .token:last-child { border-bottom: 0; }
+  .token-name { font-size: 13px; font-weight: 600; }
+  .swatch { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .chip {
+    flex: none; width: 34px; height: 34px;
+    border-radius: 8px;
+    border: 1px solid var(--hairline);
+  }
+  .swatch .hex { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+  .swatch-label { display: block; font-size: 11px; color: var(--muted); font-weight: 600; }
+
+  /* Type */
+  .type-row { display: flex; align-items: baseline; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--hairline); }
+  .type-row:last-child { border-bottom: 0; }
+  .type-spec { flex: 1; min-width: 0; }
+  .type-tag { flex: none; width: 120px; color: var(--muted); font-size: 12px; }
+  .t-score { font-size: 44px; font-weight: 800; letter-spacing: -.03em; line-height: 1; }
+  .t-head { font-size: 20px; font-weight: 800; letter-spacing: -.01em; }
+  .t-body { font-size: 15px; font-weight: 600; }
+  .t-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+
+  /* Shape & space */
+  .shape-row { display: flex; flex-wrap: wrap; gap: 16px; align-items: center; }
+  .shape-item { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12.5px; }
+  .r-disc { width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--hairline); }
+  .r-card { width: 40px; height: 40px; border-radius: var(--radius); border: 1px solid var(--hairline); }
+  .r-none { width: 40px; height: 40px; border-radius: 0; border: 1px solid var(--hairline); }
+
+  @media (max-width: 520px) {
+    .token { grid-template-columns: 96px 1fr 1fr; gap: 8px; }
+    .chip { width: 28px; height: 28px; }
+    .swatch .hex { font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="mast">
+    <div>
+      <h1>My Bad, Coach — design tokens</h1>
+      <p class="lede">The live-scoring direction: Sora, dark-first, cool neutrals, one warm amber accent, flat surfaces. Tokens below in both light and dark.</p>
+    </div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle theme">Light</button>
+  </header>
+
+  <section>
+    <h2>Buttons</h2>
+    <p class="sec-note">Three tiers. Primary is the one action that ends the point; secondary is the per-player stat tap; tertiary is a quiet utility action.</p>
+    <div class="btn-row">
+      <button class="btn btn-primary" type="button">Score</button>
+      <span class="btn-tag">primary</span>
+    </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-secondary" type="button">Touch</button>
+      <button class="btn btn-secondary" type="button">Drop</button>
+      <button class="btn btn-secondary" type="button">Turn</button>
+      <span class="btn-tag">secondary</span>
+    </div>
+    <div class="btn-row" style="margin-top:12px">
+      <button class="btn btn-tertiary" type="button">Undo</button>
+      <button class="btn btn-tertiary" type="button">More actions</button>
+      <span class="btn-tag">tertiary</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Color</h2>
+    <p class="sec-note">Left chip is the light value, right chip the dark value. Semantic hues stay distinct from the amber brand.</p>
+
+    <div class="group">
+      <h3>Brand</h3>
+      <div class="token">
+        <span class="token-name">Primary</span>
+        <span class="swatch"><span class="chip" style="background:#B47A1F"></span><span class="hex">#B47A1F</span></span>
+        <span class="swatch"><span class="chip" style="background:#F5B74A"></span><span class="hex">#F5B74A</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">Primary strong</span>
+        <span class="swatch"><span class="chip" style="background:#9A6614"></span><span class="hex">#9A6614</span></span>
+        <span class="swatch"><span class="chip" style="background:#FFC761"></span><span class="hex">#FFC761</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">On primary</span>
+        <span class="swatch"><span class="chip" style="background:#14171F"></span><span class="hex">#14171F</span></span>
+        <span class="swatch"><span class="chip" style="background:#14171F"></span><span class="hex">#14171F</span></span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Neutral</h3>
+      <div class="token">
+        <span class="token-name">Backdrop</span>
+        <span class="swatch"><span class="chip" style="background:#F2F3F7"></span><span class="hex">#F2F3F7</span></span>
+        <span class="swatch"><span class="chip" style="background:#0B0D12"></span><span class="hex">#0B0D12</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">Surface</span>
+        <span class="swatch"><span class="chip" style="background:#FFFFFF"></span><span class="hex">#FFFFFF</span></span>
+        <span class="swatch"><span class="chip" style="background:#151822"></span><span class="hex">#151822</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">Surface raised</span>
+        <span class="swatch"><span class="chip" style="background:#E9ECF2"></span><span class="hex">#E9ECF2</span></span>
+        <span class="swatch"><span class="chip" style="background:#1B1F2B"></span><span class="hex">#1B1F2B</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">Ink</span>
+        <span class="swatch"><span class="chip" style="background:#14171F"></span><span class="hex">#14171F</span></span>
+        <span class="swatch"><span class="chip" style="background:#ECEEF4"></span><span class="hex">#ECEEF4</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">Secondary</span>
+        <span class="swatch"><span class="chip" style="background:#5C6370"></span><span class="hex">#5C6370</span></span>
+        <span class="swatch"><span class="chip" style="background:#8A90A0"></span><span class="hex">#8A90A0</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">Hairline</span>
+        <span class="swatch"><span class="chip" style="background:#D8DBE2"></span><span class="hex">rgba(20,23,31,.12)</span></span>
+        <span class="swatch"><span class="chip" style="background:#2A2F3C"></span><span class="hex">rgba(236,238,244,.14)</span></span>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Semantic</h3>
+      <div class="token">
+        <span class="token-name">Success</span>
+        <span class="swatch"><span class="chip" style="background:#2F8B4F"></span><span class="hex">#2F8B4F</span></span>
+        <span class="swatch"><span class="chip" style="background:#4FB27D"></span><span class="hex">#4FB27D</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">Success tint</span>
+        <span class="swatch"><span class="chip" style="background:#E4F0E8"></span><span class="hex">rgba(47,139,79,.12)</span></span>
+        <span class="swatch"><span class="chip" style="background:#1B2A22"></span><span class="hex">rgba(79,178,125,.16)</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">Warning</span>
+        <span class="swatch"><span class="chip" style="background:#D97706"></span><span class="hex">#D97706</span></span>
+        <span class="swatch"><span class="chip" style="background:#F0A438"></span><span class="hex">#F0A438</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">Warning tint</span>
+        <span class="swatch"><span class="chip" style="background:#F8EBD8"></span><span class="hex">rgba(217,119,6,.12)</span></span>
+        <span class="swatch"><span class="chip" style="background:#2C2417"></span><span class="hex">rgba(240,164,56,.16)</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">Error</span>
+        <span class="swatch"><span class="chip" style="background:#C2413B"></span><span class="hex">#C2413B</span></span>
+        <span class="swatch"><span class="chip" style="background:#E06862"></span><span class="hex">#E06862</span></span>
+      </div>
+      <div class="token">
+        <span class="token-name">Error tint</span>
+        <span class="swatch"><span class="chip" style="background:#F5E2E0"></span><span class="hex">rgba(194,65,59,.12)</span></span>
+        <span class="swatch"><span class="chip" style="background:#2A1D1C"></span><span class="hex">rgba(224,104,98,.16)</span></span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Type</h2>
+    <p class="sec-note">Sora, two weights. Numbers use tabular figures everywhere so stat columns line up.</p>
+    <div class="type-row"><span class="type-tag">Score</span><span class="type-spec t-score">13&ensp;11</span></div>
+    <div class="type-row"><span class="type-tag">Heading</span><span class="type-spec t-head">On the disc</span></div>
+    <div class="type-row"><span class="type-tag">Body</span><span class="type-spec t-body">Reed Johnson · Maya Singh</span></div>
+    <div class="type-row"><span class="type-tag">Label</span><span class="type-spec t-label">Breaks · Break opps · Turns</span></div>
+  </section>
+
+  <section>
+    <h2>Shape and space</h2>
+    <p class="sec-note">One radius for controls and cards, a full circle for avatar-like marks, and square only where the layout is ruled.</p>
+    <div class="shape-row">
+      <span class="shape-item"><span class="r-card"></span>10px card</span>
+      <span class="shape-item"><span class="r-disc"></span>full disc</span>
+      <span class="shape-item"><span class="r-none"></span>0 ruled</span>
+      <span class="shape-item">tap target 44px min</span>
+      <span class="shape-item">space 4 / 8 / 12 / 16 / 20</span>
+    </div>
+  </section>
+</main>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    var btn = document.getElementById('themeToggle');
+    function apply(t) {
+      root.setAttribute('data-theme', t);
+      btn.textContent = t === 'dark' ? 'Light' : 'Dark';
+      btn.setAttribute('aria-label', t === 'dark' ? 'Switch to light theme' : 'Switch to dark theme');
+    }
+    apply(root.getAttribute('data-theme') === 'light' ? 'light' : 'dark');
+    btn.addEventListener('click', function () {
+      apply(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+    });
+  })();
+</script>
+</body>
+</html>
