@@ -69,6 +69,11 @@ Playwright CRUD e2e) so nothing ships untested.
   member-gated delete + matches + create), and `…/events/[event_slug]/matches/[match_slug]` (edit +
   member-gated delete). The stub gained EventService + MatchService (parent-scoped slugs, cascading
   hard deletes); roster + gameplay RPCs still answer `unimplemented` for ticket 08.
+- [Build the player + roster management screens](issues/08-player-roster-crud.md):
+  `/teams/[team_slug]/players` (create/list/edit + owner-gated delete; display-name-first `names`),
+  and season + event roster add/remove (two independent levels, member-gated) completing the
+  season/event detail screens. The stub gained PlayerService + the roster RPCs (idempotent duplicate
+  adds). No lineup/starting/position columns.
 
 ## Not yet specified
 
