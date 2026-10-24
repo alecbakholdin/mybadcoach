@@ -51,6 +51,18 @@ jobs:
       - run: npm ci --prefix e2e
       - run: bash scripts/lint.sh eslint
 
+  fmt:
+    name: Format (oxfmt)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.22"
+          cache: npm
+      - run: npm ci
+      - run: npm run fmt:check
+
   test-shared:
     name: Test (TypeScript)
     runs-on: ubuntu-latest
