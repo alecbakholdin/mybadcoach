@@ -28,10 +28,15 @@ Playwright CRUD e2e) so nothing ships untested.
   stub Connect server seam (`@connectrpc/connect-node` + in-memory fake store, per
   `.scratch/backend-api/issues/03`). Minimal slice now.
 - **Work style**: delegate small AFK subtasks to haiku-class subagents (Alec's cost preference).
+- **Conventions**: prefer Svelte 5 runes over context/stores wherever possible (Alec). A public
+  marketing/hero home page at `/` (login + register buttons now; demo content hydrates later).
 
 ## Decisions so far
 
-<!-- one line per closed ticket -->
+- [Settle the client data layer and session/auth state](issues/01-client-data-layer.md): one same-origin
+  Connect transport + per-service clients in `src/lib/api/`; CSRF via an unconditional `X-Requested-With`
+  interceptor; session as a Svelte 5 rune module hydrated by `Me()`; root `+layout.ts` gate with public
+  routes `/`, `/login`, `/register`; shared `unauthenticated` → clear + redirect handler.
 
 ## Not yet specified
 

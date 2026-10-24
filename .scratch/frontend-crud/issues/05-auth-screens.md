@@ -8,6 +8,7 @@ Blocked by: 01, 02, 03, 04
 
 Build the auth screens on top of the settled data layer (ticket 01):
 
+- A public marketing/hero home page at `/` with login + register buttons (demo content hydrates later).
 - Register, login, and logout screens using the `auth` service.
 - Me-gated protected routing: hydrate `AuthService.me()` on load, redirect to `/login` when
   unauthenticated, attach the CSRF header on mutations, and redirect to the team list after login.
