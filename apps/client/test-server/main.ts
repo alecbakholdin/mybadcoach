@@ -10,11 +10,9 @@
  *
  *   node --experimental-strip-types apps/client/test-server/main.ts
  *
- * Auth, teams, seasons, events, and matches are implemented for real against the
- * fake store. Player and roster services are registered with no methods so the
- * router answers them with Connect's `unimplemented` code; ticket 08 replaces
- * each empty object with an implementation backed by `FakeStore`. Add new RPCs
- * the same way: `router.service(<GeneratedService>, implementation)`.
+ * Auth, teams, seasons, events, matches, players, and both roster levels are
+ * implemented for real against the fake store. Add new RPCs the same way:
+ * `router.service(<GeneratedService>, implementation)`.
  *
  * Test-only endpoints (not part of the Connect surface):
  *   GET  /__test/health  -> 200 "ok" (Playwright readiness)
@@ -39,6 +37,7 @@ import { FakeStore } from './store.ts';
 import {
 	createEventImplementation,
 	createMatchImplementation,
+	createPlayerImplementation,
 	createSeasonImplementation,
 	createTeamImplementation
 } from './structure.ts';
@@ -74,9 +73,14 @@ const MUTATING_PROCEDURES = new Set([
 	'/mybadcoach.events.v1.EventService/CreateEvent',
 	'/mybadcoach.events.v1.EventService/UpdateEvent',
 	'/mybadcoach.events.v1.EventService/DeleteEvent',
+	'/mybadcoach.events.v1.EventService/AddEventRosterEntry',
+	'/mybadcoach.events.v1.EventService/RemoveEventRosterEntry',
 	'/mybadcoach.matches.v1.MatchService/CreateMatch',
 	'/mybadcoach.matches.v1.MatchService/UpdateMatch',
-	'/mybadcoach.matches.v1.MatchService/DeleteMatch'
+	'/mybadcoach.matches.v1.MatchService/DeleteMatch',
+	'/mybadcoach.players.v1.PlayerService/CreatePlayer',
+	'/mybadcoach.players.v1.PlayerService/UpdatePlayer',
+	'/mybadcoach.players.v1.PlayerService/DeletePlayer'
 ]);
 
 const ALLOWED_HEADERS = [...cors.allowedHeaders, CSRF_HEADER].join(', ');
@@ -92,10 +96,7 @@ const connectHandler = connectNodeAdapter({
 		router.service(SeasonService, createSeasonImplementation(store));
 		router.service(EventService, createEventImplementation(store));
 		router.service(MatchService, createMatchImplementation(store));
-
-		// Deliberately empty: the router answers every method with
-		// `unimplemented`. Ticket 08 fills this in over `FakeStore`.
-		router.service(PlayerService, {});
+		router.service(PlayerService, createPlayerImplementation(store));
 	}
 });
 

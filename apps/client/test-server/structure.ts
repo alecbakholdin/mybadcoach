@@ -1,22 +1,24 @@
 /**
  * Fake structure services for the frontend-only Connect seam: TeamService,
- * SeasonService, EventService, and MatchService.
+ * SeasonService, EventService, MatchService, and PlayerService.
  *
  * Mirrors the structure-CRUD contract (`.scratch/backend-api/issues/05`):
  * - addressing is by nested slug (`team_slug` [+ `season_slug` [+ `event_slug`]]);
  *   ids never appear in requests;
  * - the caller must be a team member to read or mutate that team's structure;
  * - `CreateTeam` makes the caller `owner`; `UpdateTeam`, `DeleteTeam`,
- *   `DeleteSeason`, and membership management are owner-only;
- * - `DeleteEvent` and `DeleteMatch` are member-gated (any member), matching the
- *   contract;
+ *   `DeleteSeason`, `DeletePlayer`, and membership management are owner-only;
+ * - `DeleteEvent` and `DeleteMatch` are member-gated (any member), as are roster
+ *   adds/removes, matching the contract;
  * - deletes are hard and cascade.
  *
  * Slugs are generated from the name and are stable across renames (ADR-0006):
- * team slugs are globally unique, season slugs are unique within a team, event
- * slugs within a season, and match slugs (from `opponent_name`) within an event.
- * Season and event rosters stay empty until ticket 08; the roster RPCs are not
- * implemented and therefore answer `unimplemented`.
+ * team slugs are globally unique, season and player slugs are unique within a
+ * team, event slugs within a season, and match slugs (from `opponent_name`)
+ * within an event.
+ *
+ * Roster adds follow the server's `INSERT OR IGNORE`: adding an already
+ * registered player is an idempotent no-op that still returns the player.
  */
 import { Code, type HandlerContext, type ServiceImpl } from '@connectrpc/connect';
 
@@ -24,12 +26,14 @@ import { connectError, requireUser } from './auth.ts';
 import type {
 	FakeEvent,
 	FakeMatch,
+	FakePlayer,
 	FakeSeason,
 	FakeStore,
 	FakeTeam
 } from './store.ts';
 import { EventService } from '../../../packages/shared/src/gen/mybadcoach/events/v1/events_pb.ts';
 import { MatchService } from '../../../packages/shared/src/gen/mybadcoach/matches/v1/matches_pb.ts';
+import { PlayerService } from '../../../packages/shared/src/gen/mybadcoach/players/v1/players_pb.ts';
 import { SeasonService } from '../../../packages/shared/src/gen/mybadcoach/seasons/v1/seasons_pb.ts';
 import { TeamService } from '../../../packages/shared/src/gen/mybadcoach/teams/v1/teams_pb.ts';
 
@@ -37,6 +41,7 @@ export type TeamImplementation = Partial<ServiceImpl<typeof TeamService>>;
 export type SeasonImplementation = Partial<ServiceImpl<typeof SeasonService>>;
 export type EventImplementation = Partial<ServiceImpl<typeof EventService>>;
 export type MatchImplementation = Partial<ServiceImpl<typeof MatchService>>;
+export type PlayerImplementation = Partial<ServiceImpl<typeof PlayerService>>;
 
 function notFound(message: string): Error {
 	return connectError(Code.NotFound, 'not_found', message);
@@ -58,6 +63,20 @@ function requiredName(value: string, field: string): string {
 		throw invalidField(field, 'must not be empty');
 	}
 	return name;
+}
+
+/** Mirrors the server: at least one non-empty name, each trimmed, order kept. */
+function normalizeNames(names: string[]): string[] {
+	if (names.length === 0) {
+		throw invalidField('names', 'must contain at least one name');
+	}
+	return names.map((name) => {
+		const trimmed = name.trim();
+		if (trimmed === '') {
+			throw invalidField('names', 'must not contain empty names');
+		}
+		return trimmed;
+	});
 }
 
 interface Membership {
@@ -128,8 +147,20 @@ function requireMatch(
 	return match;
 }
 
+function requirePlayer(store: FakeStore, teamSlug: string, playerSlug: string): FakePlayer {
+	const player = store.findPlayer(teamSlug, playerSlug);
+	if (player === undefined) {
+		throw notFound('player not found');
+	}
+	return player;
+}
+
 function teamMessage(team: FakeTeam): FakeTeam {
 	return { id: team.id, slug: team.slug, name: team.name };
+}
+
+function playerMessage(player: FakePlayer): FakePlayer {
+	return { id: player.id, slug: player.slug, names: [...player.names] };
 }
 
 /** Builds the fake TeamService implementation over a store. */
@@ -261,12 +292,42 @@ export function createSeasonImplementation(store: FakeStore): SeasonImplementati
 			return {};
 		},
 
-		// Players arrive in ticket 08; the roster is a real, empty list until then.
+		// Member-gated roster mutations (structure contract ticket 05). A
+		// duplicate add is a no-op that still returns the player, mirroring the
+		// server's INSERT OR IGNORE.
+		addSeasonRosterEntry(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireSeason(store, request.teamSlug, request.seasonSlug);
+			const player = requirePlayer(store, request.teamSlug, request.playerSlug);
+			store.addSeasonRosterEntry(request.teamSlug, request.seasonSlug, player.id);
+			return { player: playerMessage(player) };
+		},
+
+		removeSeasonRosterEntry(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireSeason(store, request.teamSlug, request.seasonSlug);
+			const player = requirePlayer(store, request.teamSlug, request.playerSlug);
+			store.removeSeasonRosterEntry(request.teamSlug, request.seasonSlug, player.id);
+			return {};
+		},
+
 		listSeasonRoster(request, context) {
 			requireMembership(store, context, request.teamSlug);
 			requireSeason(store, request.teamSlug, request.seasonSlug);
-			return { players: [], total: 0n };
+			return {
+				players: store
+					.listSeasonRoster(
+						request.teamSlug,
+						request.seasonSlug,
+						request.offset,
+						request.limit
+					)
+					.map(playerMessage),
+				total: BigInt(store.countSeasonRoster(request.teamSlug, request.seasonSlug))
+			};
 		}
+
+		// CopySeasonRoster stays unimplemented: it is out of this ticket's UI scope.
 	};
 }
 
@@ -359,7 +420,58 @@ export function createEventImplementation(store: FakeStore): EventImplementation
 			return {};
 		},
 
-		// Roster RPCs land in ticket 08; omitted methods answer `unimplemented`.
+		// Member-gated roster mutations; a duplicate add is an idempotent no-op.
+		addEventRosterEntry(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireSeason(store, request.teamSlug, request.seasonSlug);
+			requireEvent(store, request.teamSlug, request.seasonSlug, request.eventSlug);
+			const player = requirePlayer(store, request.teamSlug, request.playerSlug);
+			store.addEventRosterEntry(
+				request.teamSlug,
+				request.seasonSlug,
+				request.eventSlug,
+				player.id
+			);
+			return { player: playerMessage(player) };
+		},
+
+		removeEventRosterEntry(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireSeason(store, request.teamSlug, request.seasonSlug);
+			requireEvent(store, request.teamSlug, request.seasonSlug, request.eventSlug);
+			const player = requirePlayer(store, request.teamSlug, request.playerSlug);
+			store.removeEventRosterEntry(
+				request.teamSlug,
+				request.seasonSlug,
+				request.eventSlug,
+				player.id
+			);
+			return {};
+		},
+
+		listEventRoster(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			requireSeason(store, request.teamSlug, request.seasonSlug);
+			requireEvent(store, request.teamSlug, request.seasonSlug, request.eventSlug);
+			return {
+				players: store
+					.listEventRoster(
+						request.teamSlug,
+						request.seasonSlug,
+						request.eventSlug,
+						request.offset,
+						request.limit
+					)
+					.map(playerMessage),
+				total: BigInt(
+					store.countEventRoster(
+						request.teamSlug,
+						request.seasonSlug,
+						request.eventSlug
+					)
+				)
+			};
+		}
 	};
 }
 
@@ -469,5 +581,67 @@ export function createMatchImplementation(store: FakeStore): MatchImplementation
 		},
 
 		// Gameplay RPCs (Append/List/State/Stats) are out of scope for this map.
+	};
+}
+
+/** Builds the fake PlayerService implementation over a store. */
+export function createPlayerImplementation(store: FakeStore): PlayerImplementation {
+	return {
+		createPlayer(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			const player = store.createPlayer(request.teamSlug, normalizeNames(request.names));
+			if (player === undefined) {
+				throw notFound('team not found');
+			}
+			return { player: playerMessage(player) };
+		},
+
+		getPlayer(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			return {
+				player: playerMessage(
+					requirePlayer(store, request.teamSlug, request.playerSlug)
+				)
+			};
+		},
+
+		// Empty names means "leave unchanged" (proto3 repeated fields have no
+		// presence); a non-empty list replaces the whole name list.
+		updatePlayer(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			const existing = requirePlayer(store, request.teamSlug, request.playerSlug);
+			const player =
+				request.names.length === 0
+					? existing
+					: store.updatePlayerNames(
+							request.teamSlug,
+							request.playerSlug,
+							normalizeNames(request.names)
+						);
+			if (player === undefined) {
+				throw notFound('player not found');
+			}
+			return { player: playerMessage(player) };
+		},
+
+		// Owner-only hard delete; roster rows cascade, the match-event log does not.
+		deletePlayer(request, context) {
+			requireOwner(store, context, request.teamSlug);
+			requirePlayer(store, request.teamSlug, request.playerSlug);
+			if (!store.deletePlayer(request.teamSlug, request.playerSlug)) {
+				throw notFound('player not found');
+			}
+			return {};
+		},
+
+		listPlayers(request, context) {
+			requireMembership(store, context, request.teamSlug);
+			return {
+				players: store
+					.listPlayers(request.teamSlug, request.offset, request.limit)
+					.map(playerMessage),
+				total: BigInt(store.countPlayers(request.teamSlug))
+			};
+		}
 	};
 }

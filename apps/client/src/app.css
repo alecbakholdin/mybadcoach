@@ -194,6 +194,26 @@ body {
 .btn-danger { background: var(--error-tint); color: var(--error); border: 1px solid var(--error); }
 .btn-danger:hover { background: var(--error); color: var(--backdrop); }
 
+/* Player + roster screens */
+.field select {
+  min-height: 46px; padding: 10px 14px;
+  background: var(--surface-raised); color: var(--ink);
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  font: inherit; font-size: 14px;
+}
+.field select:focus-visible {
+  outline: 2px solid var(--ink); outline-offset: 1px;
+  border-color: var(--muted);
+}
+.player-row { flex-wrap: wrap; }
+.player-names { display: flex; flex-direction: column; gap: 2px; }
+.player-name { color: var(--ink); }
+.player-aliases { font-size: 12.5px; }
+.player-edit { flex: 1 1 100%; }
+.roster-form { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; }
+.roster-form .field { flex: 1 1 220px; margin-bottom: 0; }
+.roster-remove { flex: none; }
+
 /* Public hero */
 .hero {
   max-width: 780px; margin: 0 auto;

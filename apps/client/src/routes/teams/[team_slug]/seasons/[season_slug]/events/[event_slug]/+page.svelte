@@ -26,6 +26,58 @@
 	let matchError = $state('');
 	let creatingMatch = $state(false);
 
+	let selectedPlayerSlug = $state('');
+	let rosterError = $state('');
+	let rosterBusy = $state(false);
+
+	/** Team players not yet registered on this event's roster. */
+	const availablePlayers = $derived(
+		data.teamPlayers.filter(
+			(player) => !data.roster.some((rostered) => rostered.slug === player.slug)
+		)
+	);
+
+	async function handleAddToRoster(submit: SubmitEvent): Promise<void> {
+		submit.preventDefault();
+		if (selectedPlayerSlug === '') {
+			return;
+		}
+		rosterError = '';
+		rosterBusy = true;
+		try {
+			await eventClient.addEventRosterEntry({
+				teamSlug: data.teamSlug,
+				seasonSlug: data.seasonSlug,
+				eventSlug: data.eventSlug,
+				playerSlug: selectedPlayerSlug
+			});
+			selectedPlayerSlug = '';
+			await refreshAll();
+		} catch {
+			rosterError = 'Could not add the player to the event roster.';
+		} finally {
+			rosterBusy = false;
+		}
+	}
+
+	async function handleRemoveFromRoster(playerSlug: string): Promise<void> {
+		rosterError = '';
+		rosterBusy = true;
+		try {
+			await eventClient.removeEventRosterEntry({
+				teamSlug: data.teamSlug,
+				seasonSlug: data.seasonSlug,
+				eventSlug: data.eventSlug,
+				playerSlug
+			});
+			await refreshAll();
+		} catch {
+			rosterError = 'Could not remove the player from the event roster.';
+		} finally {
+			rosterBusy = false;
+		}
+	}
+
 	/** Empty stays absent; the number input keeps the rest integral. */
 	function parsedPointCap(value: string): bigint | undefined {
 		const trimmed = value.trim();
@@ -250,6 +302,67 @@
 					{creatingMatch ? 'Creating match…' : 'Create match'}
 				</button>
 			</form>
+		</section>
+
+		<section class="section-card">
+			<h2>Event roster</h2>
+			<p class="muted">
+				{data.rosterTotal}
+				{data.rosterTotal === 1 ? 'player' : 'players'} on this event's roster. The event
+				roster is independent of the season roster.
+			</p>
+			{#if data.roster.length === 0}
+				<p class="muted">No players on this event's roster yet.</p>
+			{:else}
+				<ul class="item-list" aria-label="Event roster">
+					{#each data.roster as player (player.slug)}
+						<li class="item-row">
+							<span>{player.names[0] ?? player.slug}</span>
+							<button
+								class="btn btn-secondary roster-remove"
+								type="button"
+								disabled={rosterBusy}
+								onclick={() => {
+									void handleRemoveFromRoster(player.slug);
+								}}
+							>
+								Remove
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+			{#if rosterError !== ''}
+				<p class="form-error" role="alert">{rosterError}</p>
+			{/if}
+			{#if availablePlayers.length === 0}
+				<p class="muted">
+					{#if data.teamPlayers.length === 0}
+						No team players yet. Add players from the team's Players screen.
+					{:else}
+						Every team player is already on this event's roster.
+					{/if}
+				</p>
+			{:else}
+				<form class="roster-form" onsubmit={handleAddToRoster}>
+					<div class="field">
+						<label for="add-event-roster-player">Player to add</label>
+						<select id="add-event-roster-player" bind:value={selectedPlayerSlug}>
+							<option value="">Select a player</option>
+							{#each availablePlayers as player (player.slug)}
+								<option value={player.slug}>{player.names[0] ?? player.slug}</option>
+							{/each}
+						</select>
+					</div>
+					<button
+						class="btn btn-primary"
+						type="submit"
+						disabled={rosterBusy || selectedPlayerSlug === ''}
+					>
+						Add to event roster
+					</button>
+				</form>
+			{/if}
 		</section>
 	{/if}
 </main>

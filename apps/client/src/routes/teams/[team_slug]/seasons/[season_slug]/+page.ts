@@ -1,4 +1,9 @@
-import { events as eventClient, seasons as seasonClient, teams } from '#lib/api';
+import {
+	events as eventClient,
+	players as playerClient,
+	seasons as seasonClient,
+	teams
+} from '#lib/api';
 import { session } from '#lib/session.svelte';
 import type { SeasonDetailData } from '#lib/structure-data';
 
@@ -20,7 +25,8 @@ export const load = async ({
 			events: [],
 			eventsTotal: 0,
 			roster: [],
-			rosterTotal: 0
+			rosterTotal: 0,
+			teamPlayers: []
 		};
 	}
 	const myTeams = await teams.listMyTeams({});
@@ -35,14 +41,16 @@ export const load = async ({
 			events: [],
 			eventsTotal: 0,
 			roster: [],
-			rosterTotal: 0
+			rosterTotal: 0,
+			teamPlayers: []
 		};
 	}
 
-	const [seasonResponse, eventResponse, rosterResponse] = await Promise.all([
+	const [seasonResponse, eventResponse, rosterResponse, playerResponse] = await Promise.all([
 		seasonClient.getSeason({ teamSlug, seasonSlug }),
 		eventClient.listEvents({ teamSlug, seasonSlug, offset: 0, limit: 100 }),
-		seasonClient.listSeasonRoster({ teamSlug, seasonSlug, offset: 0, limit: 100 })
+		seasonClient.listSeasonRoster({ teamSlug, seasonSlug, offset: 0, limit: 100 }),
+		playerClient.listPlayers({ teamSlug, offset: 0, limit: 100 })
 	]);
 	return {
 		teamSlug,
@@ -53,6 +61,7 @@ export const load = async ({
 		events: eventResponse.events,
 		eventsTotal: Number(eventResponse.total),
 		roster: rosterResponse.players,
-		rosterTotal: Number(rosterResponse.total)
+		rosterTotal: Number(rosterResponse.total),
+		teamPlayers: playerResponse.players
 	};
 };

@@ -102,7 +102,15 @@
 	{:else}
 		<div class="page-head">
 			<h1>{data.teamName}</h1>
-			<span class="badge" class:badge-owner={isOwner}>{isOwner ? 'Owner' : 'Member'}</span>
+			<div class="btn-row">
+				<a
+					class="btn btn-secondary"
+					href={resolve('/teams/[team_slug]/players', { team_slug: data.teamSlug })}
+				>
+					Players
+				</a>
+				<span class="badge" class:badge-owner={isOwner}>{isOwner ? 'Owner' : 'Member'}</span>
+			</div>
 		</div>
 
 		<section class="section-card">
