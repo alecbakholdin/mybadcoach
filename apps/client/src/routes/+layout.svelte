@@ -1,8 +1,10 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
+
 	import '../app.css';
 	import { theme } from '#lib/theme.svelte';
 
-	let { children } = $props();
+	let { children }: { children: Snippet } = $props();
 
 	const toggleLabel = $derived(
 		theme.current === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'

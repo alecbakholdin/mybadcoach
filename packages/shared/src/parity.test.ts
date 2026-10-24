@@ -101,7 +101,7 @@ function assertNoNullish(value: unknown, path = '$'): void {
     throw new Error(`${path} must never be null or undefined`);
   }
   if (Array.isArray(value)) {
-    value.forEach((entry, index) => assertNoNullish(entry, `${path}[${index}]`));
+    value.forEach((entry, index) => { assertNoNullish(entry, `${path}[${index}]`); });
   } else if (typeof value === 'object') {
     for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
       assertNoNullish(entry, `${path}.${key}`);

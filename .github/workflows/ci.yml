@@ -12,7 +12,7 @@ permissions:
 
 # Every job is independent: no `needs` chains, so each check runs in parallel
 # and shows up as its own status on the PR. Frontend (TypeScript) and backend
-# (Go) are split, and lint is split into Go vs protobuf.
+# (Go) are split, and lint is split into Go, protobuf, and TypeScript/Svelte.
 
 jobs:
   lint-go:
@@ -38,6 +38,18 @@ jobs:
           cache-dependency-path: server/go.sum
       - run: bash scripts/install-tools.sh buf
       - run: bash scripts/lint.sh buf
+
+  lint-eslint:
+    name: Lint (TypeScript/Svelte)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.22"
+          cache: npm
+      - run: npm ci
+      - run: bash scripts/lint.sh eslint
 
   test-shared:
     name: Test (TypeScript)

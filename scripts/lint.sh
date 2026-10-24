@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Strict lint gate: Go (golangci-lint) plus protobuf (buf lint + buf breaking).
+# Strict lint gate: Go (golangci-lint), protobuf (buf lint + buf breaking),
+# and TypeScript/Svelte (ESLint, one shared strict config across workspaces).
 #
-# Usage: scripts/lint.sh [go|buf]   (no argument runs both)
+# Usage: scripts/lint.sh [go|buf|eslint]   (no argument runs all)
 #
-# Run from the repo root via `npm run lint`. CI splits the two into separate
-# jobs by passing `go` or `buf`. ESLint is a separate, deferred effort and is
-# intentionally not wired here.
+# Run from the repo root via `npm run lint`. CI splits the language gates into
+# separate jobs by passing `go`, `buf`, or `eslint`.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -18,8 +18,8 @@ fi
 
 TARGET="${1:-all}"
 case "$TARGET" in
-  go|buf|all) ;;
-  *) echo "usage: $0 [go|buf]" >&2; exit 2 ;;
+  go|buf|eslint|all) ;;
+  *) echo "usage: $0 [go|buf|eslint]" >&2; exit 2 ;;
 esac
 
 require() {
@@ -34,6 +34,14 @@ if [ "$TARGET" = "all" ] || [ "$TARGET" = "go" ]; then
   require golangci-lint
   echo "== golangci-lint (server) =="
   (cd server && golangci-lint run ./...)
+fi
+
+if [ "$TARGET" = "all" ] || [ "$TARGET" = "eslint" ]; then
+  require node
+  echo "== eslint (all workspaces) =="
+  # --max-warnings 0 keeps the "zero warnings" policy enforced even if a rule
+  # is ever added at warning level.
+  npm exec -- eslint . --max-warnings 0
 fi
 
 if [ "$TARGET" = "all" ] || [ "$TARGET" = "buf" ]; then
