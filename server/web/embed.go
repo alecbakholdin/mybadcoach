@@ -15,6 +15,12 @@ import (
 //go:embed all:static
 var static embed.FS
 
+// immutableCacheControl is safe for Vite's content-hashed `_app/immutable`
+// assets and for the self-hosted fonts. Font filenames are not hashed, so a
+// font change must ship under a new name (e.g. sora-latin-v2.woff2); that
+// contract is why the immutable directive is defensible here.
+const immutableCacheControl = "public, max-age=31536000, immutable"
+
 // Handler serves the embedded SPA build.
 func Handler() http.Handler {
 	root, err := fs.Sub(static, "static")
@@ -45,8 +51,25 @@ func newHandler(root fs.FS) http.Handler {
 			serveShell(w, index)
 			return
 		}
+		if cacheControl := cacheControlFor(upath); cacheControl != "" {
+			w.Header().Set("Cache-Control", cacheControl)
+		}
 		fileServer.ServeHTTP(w, r)
 	})
+}
+
+// cacheControlFor returns the long-lived Cache-Control header for a static
+// file, or "" when the path should keep the default (revalidating) behavior.
+// The SPA shell never reaches here, so it is not cached as a document.
+func cacheControlFor(upath string) string {
+	switch {
+	case strings.HasPrefix(upath, "_app/immutable/"):
+		return immutableCacheControl
+	case strings.HasPrefix(upath, "fonts/"):
+		return immutableCacheControl
+	default:
+		return ""
+	}
 }
 
 // serveShell writes the SPA entry document, or 404 when the client has not

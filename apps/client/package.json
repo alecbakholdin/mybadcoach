@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "imports": {
+    "#lib": "./src/lib",
+    "#lib/*": "./src/lib/*"
+  },
   "description": "SvelteKit client for My Bad, Coach",
   "scripts": {
     "dev": "vite dev",
