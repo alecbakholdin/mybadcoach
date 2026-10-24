@@ -10,11 +10,11 @@
  *
  *   node --experimental-strip-types apps/client/test-server/main.ts
  *
- * Auth is implemented for real against the fake store. The structure services
- * are registered with no methods so the router answers them with Connect's
- * `unimplemented` code; tickets 06-08 replace each empty object with a
- * implementation backed by `FakeStore`. Add new RPCs the same way the auth
- * service is wired: `router.service(<GeneratedService>, implementation)`.
+ * Auth, teams, and seasons are implemented for real against the fake store.
+ * Event, match, and player services are registered with no methods so the
+ * router answers them with Connect's `unimplemented` code; tickets 07-08
+ * replace each empty object with an implementation backed by `FakeStore`. Add
+ * new RPCs the same way: `router.service(<GeneratedService>, implementation)`.
  *
  * Test-only endpoints (not part of the Connect surface):
  *   GET  /__test/health  -> 200 "ok" (Playwright readiness)
@@ -36,6 +36,7 @@ import { connectNodeAdapter } from '@connectrpc/connect-node';
 
 import { createAuthImplementation } from './auth.ts';
 import { FakeStore } from './store.ts';
+import { createSeasonImplementation, createTeamImplementation } from './structure.ts';
 import { AuthService } from '../../../packages/shared/src/gen/mybadcoach/auth/v1/auth_pb.ts';
 import { EventService } from '../../../packages/shared/src/gen/mybadcoach/events/v1/events_pb.ts';
 import { MatchService } from '../../../packages/shared/src/gen/mybadcoach/matches/v1/matches_pb.ts';
@@ -52,7 +53,19 @@ const CSRF_HEADER = 'X-Requested-With';
 const MUTATING_PROCEDURES = new Set([
 	'/mybadcoach.auth.v1.AuthService/Register',
 	'/mybadcoach.auth.v1.AuthService/Login',
-	'/mybadcoach.auth.v1.AuthService/Logout'
+	'/mybadcoach.auth.v1.AuthService/Logout',
+	'/mybadcoach.teams.v1.TeamService/CreateTeam',
+	'/mybadcoach.teams.v1.TeamService/UpdateTeam',
+	'/mybadcoach.teams.v1.TeamService/DeleteTeam',
+	'/mybadcoach.teams.v1.TeamService/AddMembership',
+	'/mybadcoach.teams.v1.TeamService/UpdateMembership',
+	'/mybadcoach.teams.v1.TeamService/RemoveMembership',
+	'/mybadcoach.seasons.v1.SeasonService/CreateSeason',
+	'/mybadcoach.seasons.v1.SeasonService/UpdateSeason',
+	'/mybadcoach.seasons.v1.SeasonService/DeleteSeason',
+	'/mybadcoach.seasons.v1.SeasonService/AddSeasonRosterEntry',
+	'/mybadcoach.seasons.v1.SeasonService/RemoveSeasonRosterEntry',
+	'/mybadcoach.seasons.v1.SeasonService/CopySeasonRoster'
 ]);
 
 const ALLOWED_HEADERS = [...cors.allowedHeaders, CSRF_HEADER].join(', ');
@@ -64,11 +77,11 @@ const store = new FakeStore();
 const connectHandler = connectNodeAdapter({
 	routes(router) {
 		router.service(AuthService, createAuthImplementation(store));
+		router.service(TeamService, createTeamImplementation(store));
+		router.service(SeasonService, createSeasonImplementation(store));
 
 		// Deliberately empty: the router answers every method with
-		// `unimplemented`. Tickets 06-08 fill these in over `FakeStore`.
-		router.service(TeamService, {});
-		router.service(SeasonService, {});
+		// `unimplemented`. Tickets 07-08 fill these in over `FakeStore`.
 		router.service(EventService, {});
 		router.service(MatchService, {});
 		router.service(PlayerService, {});

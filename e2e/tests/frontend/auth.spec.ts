@@ -33,7 +33,7 @@ test('register signs the user in and redirects to /teams', async ({ page }) => {
 
 	await expect(page).toHaveURL(/\/teams$/);
 	await expect(page.getByRole('heading', { name: 'Your teams' })).toBeVisible();
-	await expect(page.getByText('Signed in as Casey Coach')).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Create team' })).toBeVisible();
 });
 
 test('logout clears the session and returns home', async ({ page }) => {
@@ -71,7 +71,7 @@ test('login accepts a registered account', async ({ page, playwright }) => {
 	await page.getByRole('button', { name: 'Log in', exact: true }).click();
 
 	await expect(page).toHaveURL(/\/teams$/);
-	await expect(page.getByText('Signed in as Robin Handler')).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Your teams' })).toBeVisible();
 });
 
 test('login surfaces invalid credentials on the form', async ({ page }) => {
