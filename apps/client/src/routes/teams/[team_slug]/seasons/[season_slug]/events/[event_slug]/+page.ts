@@ -7,7 +7,7 @@ import {
 } from '#lib/api';
 import { undefinedIfNotFound } from '#lib/api/errors';
 import { session } from '#lib/session.svelte';
-import type { EventDetailData } from '#lib/structure-data';
+import { teamRoleOf, type EventDetailData } from '#lib/structure-data';
 
 // Nested-slug addressing: every request carries the whole ancestor chain. The
 // caller's role comes from `ListMyTeams`, and a non-member sees the not-found
@@ -30,7 +30,7 @@ export const load = async ({
 		eventSlug,
 		teamName: '',
 		seasonName: '',
-		role: '',
+		role: 'member',
 		event: undefined,
 		matches: [],
 		matchesTotal: 0,
@@ -65,7 +65,7 @@ export const load = async ({
 		eventSlug,
 		teamName: membership.team.name,
 		seasonName: seasonResponse?.season?.name ?? '',
-		role: membership.role,
+		role: teamRoleOf(membership.role),
 		event: eventResponse?.event,
 		matches: matchResponse?.matches ?? [],
 		matchesTotal: Number(matchResponse?.total ?? 0n),

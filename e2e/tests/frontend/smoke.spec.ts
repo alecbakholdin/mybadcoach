@@ -1,9 +1,10 @@
 import { expect, test } from '@playwright/test';
 
+import { connectContext, STUB_URL } from './helpers';
+
 // Frontend-only smoke: proves the real client build renders against the stub
 // Connect server and that the stub is a real Connect boundary (real framing,
 // real HTTP status codes, real cookie sessions).
-const STUB_URL = 'http://127.0.0.1:4174';
 const AUTH = 'mybadcoach.auth.v1.AuthService';
 
 test.beforeEach(async ({ request }) => {
@@ -24,10 +25,7 @@ test('renders the client app shell', async ({ page }) => {
 });
 
 test('serves Connect unauthenticated for Me without a session', async ({ playwright }) => {
-	const api = await playwright.request.newContext({
-		baseURL: STUB_URL,
-		extraHTTPHeaders: { 'X-Requested-With': 'XMLHttpRequest' }
-	});
+	const api = await connectContext(playwright);
 
 	try {
 		const response = await api.post(`/${AUTH}/Me`, { data: {} });
@@ -40,10 +38,7 @@ test('serves Connect unauthenticated for Me without a session', async ({ playwri
 });
 
 test('mints a real session cookie that Me honors', async ({ playwright }) => {
-	const api = await playwright.request.newContext({
-		baseURL: STUB_URL,
-		extraHTTPHeaders: { 'X-Requested-With': 'XMLHttpRequest' }
-	});
+	const api = await connectContext(playwright);
 
 	try {
 		const email = `smoke-${String(Date.now())}@mybadcoach.dev`;

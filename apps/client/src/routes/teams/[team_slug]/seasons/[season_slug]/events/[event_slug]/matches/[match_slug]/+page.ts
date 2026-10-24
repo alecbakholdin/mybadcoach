@@ -1,7 +1,7 @@
 import { events as eventClient, matches as matchClient, teams } from '#lib/api';
 import { undefinedIfNotFound } from '#lib/api/errors';
 import { session } from '#lib/session.svelte';
-import type { MatchDetailData } from '#lib/structure-data';
+import { teamRoleOf, type MatchDetailData } from '#lib/structure-data';
 
 // Nested-slug addressing: every request carries the whole ancestor chain. A
 // non-member sees the not-found state without a second permission-denied
@@ -29,7 +29,7 @@ export const load = async ({
 		matchSlug,
 		teamName: '',
 		eventName: '',
-		role: '',
+		role: 'member',
 		match: undefined
 	});
 	if ((await session.load()) === null) {
@@ -54,7 +54,7 @@ export const load = async ({
 		matchSlug,
 		teamName: membership.team.name,
 		eventName: eventResponse?.event?.name ?? '',
-		role: membership.role,
+		role: teamRoleOf(membership.role),
 		match: matchResponse?.match
 	};
 };

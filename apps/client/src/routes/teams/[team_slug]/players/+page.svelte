@@ -3,7 +3,9 @@
 	import { resolve } from '$app/paths';
 
 	import { players as playerClient } from '#lib/api';
-	import { fieldErrorsOf } from '#lib/api/errors';
+	import { formErrorOf } from '#lib/forms';
+	import { aliases, displayName } from '#lib/players';
+	import RoleBadge from '#lib/RoleBadge.svelte';
 	import type { PlayerListData } from '#lib/structure-data';
 	import type { Player } from '$shared/gen/mybadcoach/players/v1/players_pb';
 
@@ -11,8 +13,8 @@
 
 	const isOwner = $derived(data.role === 'owner');
 
-	let displayName = $state('');
-	let aliases = $state('');
+	let newDisplayName = $state('');
+	let newAliases = $state('');
 	let createFieldErrors = $state<Record<string, string>>({});
 	let createError = $state('');
 	let creating = $state(false);
@@ -36,19 +38,11 @@
 		return [display.trim(), ...trimmedAliases];
 	}
 
-	function displayNameOf(player: Player): string {
-		return player.names[0] ?? player.slug;
-	}
-
-	function aliasesOf(player: Player): string {
-		return player.names.slice(1).join(', ');
-	}
-
 	async function handleCreate(submit: SubmitEvent): Promise<void> {
 		submit.preventDefault();
 		createError = '';
 		createFieldErrors = {};
-		if (displayName.trim() === '') {
+		if (newDisplayName.trim() === '') {
 			createFieldErrors = { names: 'Enter a display name.' };
 			return;
 		}
@@ -56,18 +50,15 @@
 		try {
 			await playerClient.createPlayer({
 				teamSlug: data.teamSlug,
-				names: buildNames(displayName, aliases)
+				names: buildNames(newDisplayName, newAliases)
 			});
-			displayName = '';
-			aliases = '';
+			newDisplayName = '';
+			newAliases = '';
 			await refreshAll();
 		} catch (error) {
-			const violations = fieldErrorsOf(error);
-			if (Object.keys(violations).length > 0) {
-				createFieldErrors = violations;
-			} else {
-				createError = 'Could not create the player.';
-			}
+			const outcome = formErrorOf(error, 'Could not create the player.');
+			createFieldErrors = outcome.fieldErrors;
+			createError = outcome.message;
 		} finally {
 			creating = false;
 		}
@@ -75,8 +66,8 @@
 
 	function startEdit(player: Player): void {
 		editingSlug = player.slug;
-		editDisplayName = displayNameOf(player);
-		editAliases = aliasesOf(player);
+		editDisplayName = displayName(player);
+		editAliases = aliases(player);
 		editFieldErrors = {};
 		editError = '';
 	}
@@ -109,12 +100,9 @@
 			editingSlug = null;
 			await refreshAll();
 		} catch (error) {
-			const violations = fieldErrorsOf(error);
-			if (Object.keys(violations).length > 0) {
-				editFieldErrors = violations;
-			} else {
-				editError = 'Could not save the player.';
-			}
+			const outcome = formErrorOf(error, 'Could not save the player.');
+			editFieldErrors = outcome.fieldErrors;
+			editError = outcome.message;
 		} finally {
 			savingEdit = false;
 		}
@@ -123,7 +111,7 @@
 	async function handleDelete(player: Player): Promise<void> {
 		if (
 			!confirm(
-				`Delete ${displayNameOf(player)}? This removes them from every season and event roster.`
+				`Delete ${displayName(player)}? This removes them from every season and event roster.`
 			)
 		) {
 			return;
@@ -161,7 +149,7 @@
 	{:else}
 		<div class="page-head">
 			<h1>Players</h1>
-			<span class="badge" class:badge-owner={isOwner}>{isOwner ? 'Owner' : 'Member'}</span>
+			<RoleBadge role={data.role} />
 		</div>
 
 		<section class="section-card">
@@ -208,9 +196,9 @@
 								</form>
 							{:else}
 								<div class="player-names">
-									<span class="player-name">{displayNameOf(player)}</span>
-									{#if aliasesOf(player) !== ''}
-										<span class="muted player-aliases">{aliasesOf(player)}</span>
+									<span class="player-name">{displayName(player)}</span>
+									{#if aliases(player) !== ''}
+										<span class="muted player-aliases">{aliases(player)}</span>
 									{/if}
 								</div>
 								<div class="btn-row">
@@ -251,14 +239,14 @@
 			<form onsubmit={handleCreate}>
 				<div class="field">
 					<label for="create-player-display-name">Display name</label>
-					<input id="create-player-display-name" type="text" required bind:value={displayName} />
+					<input id="create-player-display-name" type="text" required bind:value={newDisplayName} />
 					{#if createFieldErrors.names}
 						<p class="field-error">{createFieldErrors.names}</p>
 					{/if}
 				</div>
 				<div class="field">
 					<label for="create-player-aliases">Aliases (comma-separated)</label>
-					<input id="create-player-aliases" type="text" bind:value={aliases} />
+					<input id="create-player-aliases" type="text" bind:value={newAliases} />
 				</div>
 				{#if createError !== ''}
 					<p class="form-error" role="alert">{createError}</p>

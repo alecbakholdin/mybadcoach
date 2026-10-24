@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 
 	import { matches as matchClient } from '#lib/api';
-	import { fieldErrorsOf } from '#lib/api/errors';
+	import { formErrorOf } from '#lib/forms';
 	import type { MatchDetailData } from '#lib/structure-data';
 
 	let { data }: { data: MatchDetailData } = $props();
@@ -49,12 +49,9 @@
 			});
 			await refreshAll();
 		} catch (error) {
-			const violations = fieldErrorsOf(error);
-			if (Object.keys(violations).length > 0) {
-				fieldErrors = violations;
-			} else {
-				saveError = 'Could not save the match.';
-			}
+			const outcome = formErrorOf(error, 'Could not save the match.');
+			fieldErrors = outcome.fieldErrors;
+			saveError = outcome.message;
 		} finally {
 			saving = false;
 		}

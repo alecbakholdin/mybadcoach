@@ -1,25 +1,16 @@
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+
+import { connectContext, PASSWORD, registerThroughUi, STUB_URL } from './helpers';
 
 // Frontend-only auth seam: the real SvelteKit build runs against the stub
 // Connect server through Vite preview's same-origin `/mybadcoach` proxy
 // (ticket 04). Every case starts from an empty fake store.
-const STUB_URL = 'http://127.0.0.1:4174';
 const AUTH = 'mybadcoach.auth.v1.AuthService';
-
-const PASSWORD = 'password123';
 
 test.beforeEach(async ({ request }) => {
 	const reset = await request.post(`${STUB_URL}/__test/reset`);
 	expect(reset.ok()).toBe(true);
 });
-
-async function registerThroughUi(page: Page, name: string, email: string): Promise<void> {
-	await page.goto('/register');
-	await page.getByLabel('Name', { exact: true }).fill(name);
-	await page.getByLabel('Email', { exact: true }).fill(email);
-	await page.getByLabel('Password', { exact: true }).fill(PASSWORD);
-	await page.getByRole('button', { name: 'Register', exact: true }).click();
-}
 
 test('visiting a protected route unauthenticated redirects to /login', async ({ page }) => {
 	await page.goto('/teams');
@@ -52,10 +43,7 @@ test('logout clears the session and returns home', async ({ page }) => {
 
 test('login accepts a registered account', async ({ page, playwright }) => {
 	const email = 'robin@example.com';
-	const api = await playwright.request.newContext({
-		baseURL: STUB_URL,
-		extraHTTPHeaders: { 'X-Requested-With': 'XMLHttpRequest' }
-	});
+	const api = await connectContext(playwright);
 	try {
 		const registered = await api.post(`/${AUTH}/Register`, {
 			data: { email, password: PASSWORD, name: 'Robin Handler' }
@@ -86,10 +74,7 @@ test('login surfaces invalid credentials on the form', async ({ page }) => {
 
 test('register surfaces a duplicate email on the form', async ({ page, playwright }) => {
 	const email = 'taken@example.com';
-	const api = await playwright.request.newContext({
-		baseURL: STUB_URL,
-		extraHTTPHeaders: { 'X-Requested-With': 'XMLHttpRequest' }
-	});
+	const api = await connectContext(playwright);
 	try {
 		const registered = await api.post(`/${AUTH}/Register`, {
 			data: { email, password: PASSWORD, name: 'Already Here' }
@@ -99,7 +84,7 @@ test('register surfaces a duplicate email on the form', async ({ page, playwrigh
 		await api.dispose();
 	}
 
-	await registerThroughUi(page, 'Later Arrival', email);
+	await registerThroughUi(page, 'Later Arrival', email, false);
 
 	await expect(page.getByRole('alert')).toHaveText('That email is already registered.');
 	await expect(page).toHaveURL(/\/register$/);
