@@ -1,0 +1,106 @@
+/*
+ * Night game design tokens.
+ *
+ * Ported verbatim from docs/design-system.html. Sora is self-hosted so the
+ * client never fetches a font at runtime (offline-first). Google serves one
+ * variable woff2 per unicode subset for both requested weights (600 and 800),
+ * so each file is declared across that weight range.
+ */
+
+@font-face {
+  font-family: 'Sora';
+  font-style: normal;
+  font-weight: 600 800;
+  font-display: swap;
+  src: url('/fonts/sora-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Sora';
+  font-style: normal;
+  font-weight: 600 800;
+  font-display: swap;
+  src: url('/fonts/sora-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* Direction: Night game look — Sora, dark-first, cool neutrals, warm amber, flat. */
+:root {
+  color-scheme: dark;
+  --backdrop: #0B0D12;
+  --surface: #151822;
+  --surface-raised: #1B1F2B;
+  --ink: #ECEEF4;
+  --muted: #8A90A0;
+  --hairline: rgba(236, 238, 244, .14);
+  --primary: #F5B74A;
+  --primary-strong: #FFC761;
+  --on-primary: #14171F;
+  --success: #4FB27D;
+  --success-tint: rgba(79, 178, 125, .16);
+  --warning: #F0A438;
+  --warning-tint: rgba(240, 164, 56, .16);
+  --error: #E06862;
+  --error-tint: rgba(224, 104, 98, .16);
+  --radius: 10px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --backdrop: #F2F3F7;
+  --surface: #FFFFFF;
+  --surface-raised: #E9ECF2;
+  --ink: #14171F;
+  --muted: #5C6370;
+  --hairline: rgba(20, 23, 31, .12);
+  --primary: #B47A1F;
+  --primary-strong: #9A6614;
+  --on-primary: #14171F;
+  --success: #2F8B4F;
+  --success-tint: rgba(47, 139, 79, .12);
+  --warning: #D97706;
+  --warning-tint: rgba(217, 119, 6, .12);
+  --error: #C2413B;
+  --error-tint: rgba(194, 65, 59, .12);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--backdrop);
+  color: var(--ink);
+  font-family: 'Sora', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-weight: 600;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+  -webkit-font-smoothing: antialiased;
+}
+
+.theme-toggle {
+  appearance: none; cursor: pointer;
+  flex: none; min-width: 76px; height: 36px; padding: 0 14px;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--hairline); border-radius: var(--radius);
+  font: inherit; font-size: 12.5px; font-weight: 600;
+}
+.theme-toggle:hover { border-color: var(--muted); }
+.theme-toggle:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* Buttons */
+.btn-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.btn {
+  appearance: none; cursor: pointer;
+  min-height: 46px; padding: 0 20px;
+  border-radius: var(--radius);
+  font: inherit; font-size: 14px; font-weight: 600; line-height: 1;
+}
+.btn-primary { background: var(--primary); color: var(--on-primary); border: 0; }
+.btn-primary:hover { background: var(--primary-strong); }
+.btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--hairline); }
+.btn-secondary:hover { border-color: var(--muted); }
+.btn-tertiary { background: transparent; color: var(--muted); border: 0; padding: 0 12px; }
+.btn-tertiary:hover { color: var(--ink); }
+.btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
