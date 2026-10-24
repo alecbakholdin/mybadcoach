@@ -46,6 +46,23 @@ export interface FakeSeason {
 	endDate: string;
 }
 
+export interface FakeEvent {
+	id: string;
+	slug: string;
+	name: string;
+	startDate: string;
+	endDate: string;
+	location: string;
+}
+
+export interface FakeMatch {
+	id: string;
+	slug: string;
+	opponentName: string;
+	scheduledAt: string;
+	pointCap: bigint;
+}
+
 export interface FakeTeamMembership {
 	team: FakeTeam;
 	role: string;
@@ -64,6 +81,18 @@ function slugify(name: string): string {
 		.replace(/[^a-z0-9]+/g, '-')
 		.replace(/^-+|-+$/g, '');
 	return base === '' ? 'unnamed' : base;
+}
+
+/**
+ * Nested-slug keys. Slugs only contain `[a-z0-9-]`, but the NUL separator keeps
+ * the key unambiguous without relying on that.
+ */
+function seasonKey(teamSlug: string, seasonSlug: string): string {
+	return `${teamSlug}\u0000${seasonSlug}`;
+}
+
+function eventKey(teamSlug: string, seasonSlug: string, eventSlug: string): string {
+	return `${seasonKey(teamSlug, seasonSlug)}\u0000${eventSlug}`;
 }
 
 /** ADR-0006: collisions append a numeric suffix (`my-team`, `my-team-2`). */
@@ -106,14 +135,20 @@ export class FakeStore {
 	private readonly teamsBySlug = new Map<string, StoredTeam>();
 	/** Insertion order is the stable list order; slugs are unique per team. */
 	private readonly seasonsByTeamSlug = new Map<string, FakeSeason[]>();
+	/** Keyed by `seasonKey(teamSlug, seasonSlug)`; slugs unique within a season. */
+	private readonly eventsBySeason = new Map<string, FakeEvent[]>();
+	/** Keyed by `eventKey(...)`; slugs unique within an event. */
+	private readonly matchesByEvent = new Map<string, FakeMatch[]>();
 
-	/** Clears every user, session, team, and season; called between tests. */
+	/** Clears every user, session, team, and descendants; called between tests. */
 	reset(): void {
 		this.usersByEmail.clear();
 		this.usersById.clear();
 		this.sessions.clear();
 		this.teamsBySlug.clear();
 		this.seasonsByTeamSlug.clear();
+		this.eventsBySeason.clear();
+		this.matchesByEvent.clear();
 	}
 
 	findUserByEmail(email: string): FakeUser | undefined {
@@ -209,10 +244,13 @@ export class FakeStore {
 		return team;
 	}
 
-	/** Hard delete; cascades to the team's seasons. */
+	/** Hard delete; cascades to the team's seasons, events, and matches. */
 	deleteTeam(slug: string): boolean {
 		if (!this.teamsBySlug.delete(slug)) {
 			return false;
+		}
+		for (const season of this.seasonsByTeamSlug.get(slug) ?? []) {
+			this.deleteSeasonDescendants(slug, season.slug);
 		}
 		this.seasonsByTeamSlug.delete(slug);
 		return true;
@@ -290,7 +328,7 @@ export class FakeStore {
 		return season;
 	}
 
-	/** Hard delete (cascades to events/matches in the real server). */
+	/** Hard delete; cascades to the season's events and matches. */
 	deleteSeason(teamSlug: string, seasonSlug: string): boolean {
 		const seasons = this.seasonsByTeamSlug.get(teamSlug);
 		if (seasons === undefined) {
@@ -301,6 +339,207 @@ export class FakeStore {
 			return false;
 		}
 		seasons.splice(index, 1);
+		this.deleteSeasonDescendants(teamSlug, seasonSlug);
+		return true;
+	}
+
+	/** Drops every event (and match) beneath a season; assumes the season is gone. */
+	private deleteSeasonDescendants(teamSlug: string, seasonSlug: string): void {
+		const key = seasonKey(teamSlug, seasonSlug);
+		for (const event of this.eventsBySeason.get(key) ?? []) {
+			this.matchesByEvent.delete(eventKey(teamSlug, seasonSlug, event.slug));
+		}
+		this.eventsBySeason.delete(key);
+	}
+
+	// ----- Events (slugs are unique within their season) -----
+
+	createEvent(
+		teamSlug: string,
+		seasonSlug: string,
+		name: string,
+		startDate: string,
+		endDate: string,
+		location: string
+	): FakeEvent | undefined {
+		if (this.findSeason(teamSlug, seasonSlug) === undefined) {
+			return undefined;
+		}
+		const key = seasonKey(teamSlug, seasonSlug);
+		const seasonEvents = this.eventsBySeason.get(key) ?? [];
+		const event: FakeEvent = {
+			id: randomUUID(),
+			slug: uniqueSlug(slugify(name), (candidate) =>
+				seasonEvents.some((existing) => existing.slug === candidate)
+			),
+			name,
+			startDate,
+			endDate,
+			location
+		};
+		seasonEvents.push(event);
+		this.eventsBySeason.set(key, seasonEvents);
+		return event;
+	}
+
+	findEvent(
+		teamSlug: string,
+		seasonSlug: string,
+		eventSlug: string
+	): FakeEvent | undefined {
+		return this.eventsBySeason
+			.get(seasonKey(teamSlug, seasonSlug))
+			?.find((event) => event.slug === eventSlug);
+	}
+
+	listEvents(teamSlug: string, seasonSlug: string, offset: number, limit: number): FakeEvent[] {
+		const events = this.eventsBySeason.get(seasonKey(teamSlug, seasonSlug)) ?? [];
+		const start = Math.max(offset, 0);
+		const end = limit > 0 ? start + limit : events.length;
+		return events.slice(start, end);
+	}
+
+	countEvents(teamSlug: string, seasonSlug: string): number {
+		return this.eventsBySeason.get(seasonKey(teamSlug, seasonSlug))?.length ?? 0;
+	}
+
+	updateEvent(
+		teamSlug: string,
+		seasonSlug: string,
+		eventSlug: string,
+		patch: { name?: string; startDate?: string; endDate?: string; location?: string }
+	): FakeEvent | undefined {
+		const event = this.findEvent(teamSlug, seasonSlug, eventSlug);
+		if (event === undefined) {
+			return undefined;
+		}
+		if (patch.name !== undefined) {
+			event.name = patch.name;
+		}
+		if (patch.startDate !== undefined) {
+			event.startDate = patch.startDate;
+		}
+		if (patch.endDate !== undefined) {
+			event.endDate = patch.endDate;
+		}
+		if (patch.location !== undefined) {
+			event.location = patch.location;
+		}
+		return event;
+	}
+
+	/** Hard delete; cascades to the event's matches. */
+	deleteEvent(teamSlug: string, seasonSlug: string, eventSlug: string): boolean {
+		const key = seasonKey(teamSlug, seasonSlug);
+		const events = this.eventsBySeason.get(key);
+		if (events === undefined) {
+			return false;
+		}
+		const index = events.findIndex((event) => event.slug === eventSlug);
+		if (index === -1) {
+			return false;
+		}
+		events.splice(index, 1);
+		this.matchesByEvent.delete(eventKey(teamSlug, seasonSlug, eventSlug));
+		return true;
+	}
+
+	// ----- Matches (slugs are unique within their event) -----
+
+	createMatch(
+		teamSlug: string,
+		seasonSlug: string,
+		eventSlug: string,
+		opponentName: string,
+		scheduledAt: string,
+		pointCap: bigint
+	): FakeMatch | undefined {
+		if (this.findEvent(teamSlug, seasonSlug, eventSlug) === undefined) {
+			return undefined;
+		}
+		const key = eventKey(teamSlug, seasonSlug, eventSlug);
+		const eventMatches = this.matchesByEvent.get(key) ?? [];
+		const match: FakeMatch = {
+			id: randomUUID(),
+			slug: uniqueSlug(slugify(opponentName), (candidate) =>
+				eventMatches.some((existing) => existing.slug === candidate)
+			),
+			opponentName,
+			scheduledAt,
+			pointCap
+		};
+		eventMatches.push(match);
+		this.matchesByEvent.set(key, eventMatches);
+		return match;
+	}
+
+	findMatch(
+		teamSlug: string,
+		seasonSlug: string,
+		eventSlug: string,
+		matchSlug: string
+	): FakeMatch | undefined {
+		return this.matchesByEvent
+			.get(eventKey(teamSlug, seasonSlug, eventSlug))
+			?.find((match) => match.slug === matchSlug);
+	}
+
+	listMatches(
+		teamSlug: string,
+		seasonSlug: string,
+		eventSlug: string,
+		offset: number,
+		limit: number
+	): FakeMatch[] {
+		const matches = this.matchesByEvent.get(eventKey(teamSlug, seasonSlug, eventSlug)) ?? [];
+		const start = Math.max(offset, 0);
+		const end = limit > 0 ? start + limit : matches.length;
+		return matches.slice(start, end);
+	}
+
+	countMatches(teamSlug: string, seasonSlug: string, eventSlug: string): number {
+		return this.matchesByEvent.get(eventKey(teamSlug, seasonSlug, eventSlug))?.length ?? 0;
+	}
+
+	updateMatch(
+		teamSlug: string,
+		seasonSlug: string,
+		eventSlug: string,
+		matchSlug: string,
+		patch: { opponentName?: string; scheduledAt?: string; pointCap?: bigint }
+	): FakeMatch | undefined {
+		const match = this.findMatch(teamSlug, seasonSlug, eventSlug, matchSlug);
+		if (match === undefined) {
+			return undefined;
+		}
+		if (patch.opponentName !== undefined) {
+			match.opponentName = patch.opponentName;
+		}
+		if (patch.scheduledAt !== undefined) {
+			match.scheduledAt = patch.scheduledAt;
+		}
+		if (patch.pointCap !== undefined) {
+			match.pointCap = patch.pointCap;
+		}
+		return match;
+	}
+
+	/** Hard delete. */
+	deleteMatch(
+		teamSlug: string,
+		seasonSlug: string,
+		eventSlug: string,
+		matchSlug: string
+	): boolean {
+		const matches = this.matchesByEvent.get(eventKey(teamSlug, seasonSlug, eventSlug));
+		if (matches === undefined) {
+			return false;
+		}
+		const index = matches.findIndex((match) => match.slug === matchSlug);
+		if (index === -1) {
+			return false;
+		}
+		matches.splice(index, 1);
 		return true;
 	}
 }

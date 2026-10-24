@@ -1,9 +1,9 @@
-import { seasons as seasonClient, teams } from '#lib/api';
+import { events as eventClient, seasons as seasonClient, teams } from '#lib/api';
 import { session } from '#lib/session.svelte';
 import type { SeasonDetailData } from '#lib/structure-data';
 
-// The membership role gates `DeleteSeason` in the UI; the season and its
-// roster load together because this screen always shows both.
+// The membership role gates `DeleteSeason` in the UI; the season, its events,
+// and its roster load together because this screen always shows all three.
 export const load = async ({
 	params
 }: {
@@ -17,6 +17,8 @@ export const load = async ({
 			teamName: '',
 			role: '',
 			season: undefined,
+			events: [],
+			eventsTotal: 0,
 			roster: [],
 			rosterTotal: 0
 		};
@@ -30,13 +32,16 @@ export const load = async ({
 			teamName: '',
 			role: '',
 			season: undefined,
+			events: [],
+			eventsTotal: 0,
 			roster: [],
 			rosterTotal: 0
 		};
 	}
 
-	const [seasonResponse, rosterResponse] = await Promise.all([
+	const [seasonResponse, eventResponse, rosterResponse] = await Promise.all([
 		seasonClient.getSeason({ teamSlug, seasonSlug }),
+		eventClient.listEvents({ teamSlug, seasonSlug, offset: 0, limit: 100 }),
 		seasonClient.listSeasonRoster({ teamSlug, seasonSlug, offset: 0, limit: 100 })
 	]);
 	return {
@@ -45,6 +50,8 @@ export const load = async ({
 		teamName: membership.team.name,
 		role: membership.role,
 		season: seasonResponse.season,
+		events: eventResponse.events,
+		eventsTotal: Number(eventResponse.total),
 		roster: rosterResponse.players,
 		rosterTotal: Number(rosterResponse.total)
 	};

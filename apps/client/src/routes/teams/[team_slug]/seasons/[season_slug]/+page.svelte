@@ -2,9 +2,10 @@
 	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
-	import { seasons as seasonClient } from '#lib/api';
+	import { events as eventClient, seasons as seasonClient } from '#lib/api';
 	import { fieldErrorsOf } from '#lib/api/errors';
 	import type { SeasonDetailData } from '#lib/structure-data';
+	import type { Event } from '$shared/gen/mybadcoach/events/v1/events_pb';
 
 	let { data }: { data: SeasonDetailData } = $props();
 
@@ -19,6 +20,54 @@
 
 	let deleting = $state(false);
 	let deleteError = $state('');
+
+	let eventName = $state('');
+	let eventStart = $state('');
+	let eventEnd = $state('');
+	let eventLocation = $state('');
+	let eventFieldErrors = $state<Record<string, string>>({});
+	let eventError = $state('');
+	let creatingEvent = $state(false);
+
+	/** One-line summary of an event's dates and location, omitting blanks. */
+	function eventMeta(event: Event): string {
+		let dates = event.startDate;
+		if (event.endDate !== '' && event.endDate !== event.startDate) {
+			dates = dates === '' ? event.endDate : `${dates} – ${event.endDate}`;
+		}
+		return [dates, event.location].filter((part) => part !== '').join(' · ');
+	}
+
+	async function handleCreateEvent(submit: SubmitEvent): Promise<void> {
+		submit.preventDefault();
+		eventError = '';
+		eventFieldErrors = {};
+		creatingEvent = true;
+		try {
+			await eventClient.createEvent({
+				teamSlug: data.teamSlug,
+				seasonSlug: data.seasonSlug,
+				name: eventName,
+				startDate: eventStart === '' ? undefined : eventStart,
+				endDate: eventEnd === '' ? undefined : eventEnd,
+				location: eventLocation === '' ? undefined : eventLocation
+			});
+			eventName = '';
+			eventStart = '';
+			eventEnd = '';
+			eventLocation = '';
+			await refreshAll();
+		} catch (error) {
+			const violations = fieldErrorsOf(error);
+			if (Object.keys(violations).length > 0) {
+				eventFieldErrors = violations;
+			} else {
+				eventError = 'Could not create the event.';
+			}
+		} finally {
+			creatingEvent = false;
+		}
+	}
 
 	async function handleSave(event: SubmitEvent): Promise<void> {
 		event.preventDefault();
@@ -127,6 +176,66 @@
 					</button>
 				</div>
 			{/if}
+		</section>
+
+		<section class="card section-card">
+			<h2>Events</h2>
+			{#if data.events.length === 0}
+				<p class="muted">No events yet.</p>
+			{:else}
+				<ul class="item-list" aria-label="Events">
+					{#each data.events as event (event.slug)}
+						<li class="item-row">
+							<a
+								href={resolve(
+									'/teams/[team_slug]/seasons/[season_slug]/events/[event_slug]',
+									{
+										team_slug: data.teamSlug,
+										season_slug: data.seasonSlug,
+										event_slug: event.slug
+									}
+								)}
+							>
+								{event.name}
+							</a>
+							{#if eventMeta(event) !== ''}
+								<span class="muted season-dates">{eventMeta(event)}</span>
+							{/if}
+						</li>
+					{/each}
+				</ul>
+			{/if}
+
+			<h3>Create event</h3>
+			<form onsubmit={handleCreateEvent}>
+				<div class="field">
+					<label for="create-event-name">Event name</label>
+					<input id="create-event-name" type="text" required bind:value={eventName} />
+					{#if eventFieldErrors.name}
+						<p class="field-error">{eventFieldErrors.name}</p>
+					{/if}
+				</div>
+				<div class="date-range">
+					<div class="field">
+						<label for="create-event-start">Event start date</label>
+						<input id="create-event-start" type="date" bind:value={eventStart} />
+					</div>
+					<div class="field">
+						<label for="create-event-end">Event end date</label>
+						<input id="create-event-end" type="date" bind:value={eventEnd} />
+					</div>
+				</div>
+				<div class="field">
+					<label for="create-event-location">Location</label>
+					<input id="create-event-location" type="text" bind:value={eventLocation} />
+				</div>
+				{#if eventError !== ''}
+					<p class="form-error" role="alert">{eventError}</p>
+				{/if}
+				<button class="btn btn-primary" type="submit" disabled={creatingEvent}>
+					{creatingEvent ? 'Creating event…' : 'Create event'}
+				</button>
+			</form>
 		</section>
 
 		<section class="section-card">

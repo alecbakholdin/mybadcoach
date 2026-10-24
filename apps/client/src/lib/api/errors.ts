@@ -32,6 +32,27 @@ export function fieldErrorsOf(error: unknown): Record<string, string> {
 	return fieldErrors;
 }
 
+/** True for a `not_found` Connect error (missing entity or no membership). */
+export function isNotFound(error: unknown): boolean {
+	return error instanceof ConnectError && error.code === Code.NotFound;
+}
+
+/**
+ * Awaits a request that may legitimately target a missing entity, mapping
+ * `not_found` to `undefined` so route loads can render their not-found state.
+ * Every other error is rethrown.
+ */
+export async function undefinedIfNotFound<T>(promise: Promise<T>): Promise<T | undefined> {
+	try {
+		return await promise;
+	} catch (error) {
+		if (isNotFound(error)) {
+			return undefined;
+		}
+		throw error;
+	}
+}
+
 /**
  * True for the shared bad-email-or-password error. The server returns an
  * `unauthenticated` Connect code for both `invalid_credentials` and
