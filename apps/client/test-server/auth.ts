@@ -29,7 +29,7 @@ interface FieldViolationInput {
 
 const SESSION_MAX_AGE_SECONDS = String(SESSION_LIFETIME_MS / 1000);
 
-function connectError(
+export function connectError(
 	code: Code,
 	machineCode: string,
 	message: string,
@@ -125,8 +125,21 @@ function invalidCredentials(): ConnectError {
 	);
 }
 
-function sessionExpired(): ConnectError {
+export function sessionExpired(): ConnectError {
 	return connectError(Code.Unauthenticated, 'session_expired', 'session expired');
+}
+
+/**
+ * Resolves the caller from the session cookie, matching the Go middleware:
+ * every structure RPC requires an authenticated session.
+ */
+export function requireUser(store: FakeStore, context: HandlerContext): FakeUser {
+	const token = sessionToken(context.requestHeader);
+	const user = token === undefined ? undefined : store.findSessionUser(token);
+	if (user === undefined) {
+		throw sessionExpired();
+	}
+	return user;
 }
 
 function userMessage(user: FakeUser): { id: string; email: string; name: string } {
