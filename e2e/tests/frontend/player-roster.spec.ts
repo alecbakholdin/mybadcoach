@@ -15,7 +15,9 @@ import {
 // against the stub Connect server, whose PlayerService and roster RPCs mirror
 // the server contract (team-scoped slugs, idempotent roster adds, hard deletes,
 // owner-only player deletion, member-gated roster mutations). Every case starts
-// from an empty fake store.
+// from an empty fake store. The redesign turned the season roster into a
+// sortable stats table with autocomplete multi-add and bulk remove; the event
+// roster screen is unchanged.
 const AUTH = 'mybadcoach.auth.v1.AuthService';
 const TEAMS = 'mybadcoach.teams.v1.TeamService';
 const PLAYERS = 'mybadcoach.players.v1.PlayerService';
@@ -31,7 +33,7 @@ test('creates, edits, rosters, and deletes a player', async ({ page }) => {
 	await registerThroughUi(page, 'Casey Coach', 'casey@example.com');
 	await createTeamThroughUi(page, 'Fleet Foxes');
 
-	// The team screen links to player management.
+	// The team overview links to player management.
 	await page.getByRole('link', { name: 'Players', exact: true }).click();
 	await expect(page).toHaveURL(/\/teams\/fleet-foxes\/players$/);
 	await expect(page.getByRole('heading', { name: 'Players', level: 1 })).toBeVisible();
@@ -46,28 +48,29 @@ test('creates, edits, rosters, and deletes a player', async ({ page }) => {
 	await expect(adaRow).toBeVisible();
 	await expect(adaRow.getByText('Ada, Lovelace', { exact: true })).toBeVisible();
 
-	// Edit replaces the whole name list; the slug stays stable. While editing,
-	// the row shows inputs rather than the old text, so target the list itself.
+	// Edit replaces the whole name list; the slug stays stable.
 	await adaRow.getByRole('button', { name: 'Edit', exact: true }).click();
 	await playersList.getByLabel('Display name', { exact: true }).fill('Ada King');
 	await playersList.getByLabel('Aliases (comma-separated)', { exact: true }).fill('Ada, Lovelace');
 	await playersList.getByRole('button', { name: 'Save player', exact: true }).click();
 	await expect(playersList.getByRole('listitem').filter({ hasText: 'Ada King' })).toBeVisible();
 
-	// Create a season and event to roster the player at both independent levels.
+	// Create a season and roster the player via the stats-table autocomplete.
 	await page.goto('/teams/fleet-foxes');
 	await createSeasonThroughUi(page, 'Spring 2026');
-	await page.getByRole('link', { name: 'Spring 2026', exact: true }).click();
-	await expect(page).toHaveURL(/\/teams\/fleet-foxes\/seasons\/spring-2026$/);
+	await page.getByRole('tab', { name: 'Roster' }).click();
 
-	const seasonRoster = page.getByRole('list', { name: 'Season roster' });
-	await page.getByLabel('Player to add', { exact: true }).selectOption({ label: 'Ada King' });
-	await page.getByRole('button', { name: 'Add to season roster', exact: true }).click();
-	await expect(seasonRoster.getByRole('listitem').filter({ hasText: 'Ada King' })).toBeVisible();
+	await page.getByLabel('Search team players', { exact: true }).fill('Ada');
+	await page.getByRole('option', { name: 'Ada King' }).click();
+	await page.getByRole('button', { name: 'Add 1 player' }).click();
+	await expect(page.getByText('Ada King', { exact: true })).toBeVisible();
 
+	// Create an event and roster the player at the (unchanged) event level.
+	await page.getByRole('tab', { name: 'Events' }).click();
+	await page.getByRole('button', { name: 'New event' }).click();
 	await page.getByLabel('Event name', { exact: true }).fill('Summer Classic');
 	await page.getByRole('button', { name: 'Create event', exact: true }).click();
-	await page.getByRole('link', { name: 'Summer Classic', exact: true }).click();
+	await page.getByRole('link', { name: 'Summer Classic' }).click();
 	await expect(page).toHaveURL(
 		/\/teams\/fleet-foxes\/seasons\/spring-2026\/events\/summer-classic$/,
 	);
@@ -82,16 +85,12 @@ test('creates, edits, rosters, and deletes a player', async ({ page }) => {
 	await expect(page.getByText("No players on this event's roster yet.")).toBeVisible();
 
 	await page.goto('/teams/fleet-foxes/seasons/spring-2026');
-	await expect(
-		page
-			.getByRole('list', { name: 'Season roster' })
-			.getByRole('listitem')
-			.filter({ hasText: 'Ada King' }),
-	).toBeVisible();
-	await page
-		.getByRole('list', { name: 'Season roster' })
-		.getByRole('button', { name: 'Remove', exact: true })
-		.click();
+	await page.getByRole('tab', { name: 'Roster' }).click();
+	await expect(page.getByText('Ada King', { exact: true })).toBeVisible();
+
+	// Season roster removal is a bulk action: select the row, then remove.
+	await page.getByRole('checkbox', { name: 'Select Ada King' }).check();
+	await page.getByRole('button', { name: 'Remove selected' }).click();
 	await expect(page.getByText("No players on this season's roster yet.")).toBeVisible();
 
 	// Owner-only hard delete from the players screen.
@@ -206,16 +205,17 @@ test('lets a non-owner member manage rosters but not delete players', async ({
 
 	// Season roster add/remove is member-gated, not owner-gated.
 	await page.goto(`/teams/${teamSlug}/seasons/${seasonSlug}`);
-	await page.getByLabel('Player to add', { exact: true }).selectOption({ label: 'Ada Lovelace' });
-	await page.getByRole('button', { name: 'Add to season roster', exact: true }).click();
-	const seasonRoster = page.getByRole('list', { name: 'Season roster' });
-	await expect(
-		seasonRoster.getByRole('listitem').filter({ hasText: 'Ada Lovelace' }),
-	).toBeVisible();
-	await seasonRoster.getByRole('button', { name: 'Remove', exact: true }).click();
+	await page.getByRole('tab', { name: 'Roster' }).click();
+	await page.getByLabel('Search team players', { exact: true }).fill('Ada');
+	await page.getByRole('option', { name: 'Ada Lovelace' }).click();
+	await page.getByRole('button', { name: 'Add 1 player' }).click();
+	await expect(page.getByText('Ada Lovelace', { exact: true })).toBeVisible();
+
+	await page.getByRole('checkbox', { name: 'Select Ada Lovelace' }).check();
+	await page.getByRole('button', { name: 'Remove selected' }).click();
 	await expect(page.getByText("No players on this season's roster yet.")).toBeVisible();
 
-	// Event roster add/remove is independently member-gated.
+	// Event roster add/remove is independently member-gated (unchanged screen).
 	await page.goto(`/teams/${teamSlug}/seasons/${seasonSlug}/events/${eventSlug}`);
 	await page.getByLabel('Player to add', { exact: true }).selectOption({ label: 'Ada Lovelace' });
 	await page.getByRole('button', { name: 'Add to event roster', exact: true }).click();
@@ -223,4 +223,64 @@ test('lets a non-owner member manage rosters but not delete players', async ({
 	await expect(eventRoster.getByRole('listitem').filter({ hasText: 'Ada Lovelace' })).toBeVisible();
 	await eventRoster.getByRole('button', { name: 'Remove', exact: true }).click();
 	await expect(page.getByText("No players on this event's roster yet.")).toBeVisible();
+});
+
+/** Seeds a team, season, and three un-rostered players via the Connect boundary. */
+async function seedPlayers(playwright: PlaywrightWorkerArgs['playwright']): Promise<void> {
+	const api = await connectContext(playwright);
+	try {
+		const registered = await api.post(`/${AUTH}/Register`, {
+			data: { email: 'casey@example.com', password: PASSWORD, name: 'Casey Coach' },
+		});
+		expect(registered.ok()).toBe(true);
+
+		const created = await api.post(`/${TEAMS}/CreateTeam`, { data: { name: 'Fleet Foxes' } });
+		expect(created.ok()).toBe(true);
+		const teamSlug = ((await created.json()) as { team?: { slug?: string } }).team?.slug ?? '';
+		expect(teamSlug).toBe('fleet-foxes');
+
+		const season = await api.post(`/${SEASONS}/CreateSeason`, {
+			data: { teamSlug, name: 'Spring 2026' },
+		});
+		expect(season.ok()).toBe(true);
+
+		for (const name of ['Ada Lovelace', 'Maya Singh', 'Reed Johnson']) {
+			const player = await api.post(`/${PLAYERS}/CreatePlayer`, {
+				data: { teamSlug, names: [name] },
+			});
+			expect(player.ok()).toBe(true);
+		}
+	} finally {
+		await api.dispose();
+	}
+}
+
+test('sorts the roster, renders placeholder stats, and multi-adds players', async ({
+	page,
+	playwright,
+}) => {
+	await seedPlayers(playwright);
+	await loginThroughUi(page, 'casey@example.com');
+	await page.goto('/teams/fleet-foxes/seasons/spring-2026');
+	await page.getByRole('tab', { name: 'Roster' }).click();
+
+	// Multi-add two players in one action.
+	await page.getByLabel('Search team players', { exact: true }).fill('a');
+	await page.getByRole('option', { name: 'Ada Lovelace' }).click();
+	await page.getByRole('option', { name: 'Maya Singh' }).click();
+	await page.getByRole('button', { name: 'Add 2 players' }).click();
+
+	const table = page.locator('.stats-table');
+	await expect(table.getByText('Ada Lovelace', { exact: true })).toBeVisible();
+	await expect(table.getByText('Maya Singh', { exact: true })).toBeVisible();
+	// Placeholder stats render as em-dashes.
+	await expect(table.locator('td.col-num').first()).toContainText('—');
+
+	// Sorting by name flips the row order between ascending and descending. The
+	// table starts name-ascending, so the first click toggles to descending.
+	const playerHeader = page.getByRole('button', { name: 'Player', exact: true });
+	await playerHeader.click();
+	await expect(table.locator('tbody tr').first()).toContainText('Maya Singh');
+	await playerHeader.click();
+	await expect(table.locator('tbody tr').first()).toContainText('Ada Lovelace');
 });

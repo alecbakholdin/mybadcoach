@@ -24,6 +24,20 @@ export interface TeamListData {
 	memberships: TeamMembership[];
 }
 
+/**
+ * Data for the shared `teams/+layout` master–detail shell: every membership
+ * (for the rail's team list), plus the active team's seasons and the active
+ * slugs (for the nested-season list and the amber active edge). Season listing
+ * is scoped to the active team only — the rail never fetches every team's
+ * seasons.
+ */
+export interface TeamsShellData {
+	memberships: TeamMembership[];
+	activeTeamSlug: string | undefined;
+	activeSeasonSlug: string | undefined;
+	activeTeamSeasons: Season[];
+}
+
 export interface TeamDetailData {
 	teamSlug: string;
 	teamName: string;

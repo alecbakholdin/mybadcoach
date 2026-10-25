@@ -30,10 +30,10 @@ test('creates, edits, and deletes an event and its matches', async ({ page }) =>
 	await registerThroughUi(page, 'Casey Coach', 'casey@example.com');
 	await createTeamThroughUi(page, 'Fleet Foxes');
 	await createSeasonThroughUi(page, 'Spring 2026');
-	await page.getByRole('link', { name: 'Spring 2026', exact: true }).click();
 	await expect(page).toHaveURL(/\/teams\/fleet-foxes\/seasons\/spring-2026$/);
 
 	// Create the event and list it on the season screen.
+	await page.getByRole('button', { name: 'New event' }).click();
 	await page.getByLabel('Event name', { exact: true }).fill('Summer Classic');
 	await page.getByRole('button', { name: 'Create event', exact: true }).click();
 	await expect(page.getByRole('link', { name: 'Summer Classic', exact: true })).toBeVisible();
@@ -159,10 +159,11 @@ test('lets a non-owner member create, edit, and delete events and matches', asyn
 	await loginThroughUi(page, 'member@example.com');
 
 	await page.goto(`/teams/${teamSlug}/seasons/${seasonSlug}`);
-	await expect(page.getByRole('button', { name: 'Create event', exact: true })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'New event' })).toBeVisible();
 	await expect(page.getByRole('link', { name: 'Summer Classic', exact: true })).toBeVisible();
 
 	// Membership (not just ownership) grants structure mutations.
+	await page.getByRole('button', { name: 'New event' }).click();
 	await page.getByLabel('Event name', { exact: true }).fill('Fall League');
 	await page.getByRole('button', { name: 'Create event', exact: true }).click();
 	await expect(page.getByRole('link', { name: 'Fall League', exact: true })).toBeVisible();

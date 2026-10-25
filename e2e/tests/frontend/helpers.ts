@@ -49,19 +49,31 @@ export async function loginThroughUi(page: Page, email: string): Promise<void> {
 	await expect(page).toHaveURL(/\/teams$/);
 }
 
-/** Creates a team from the teams screen and lands on its detail screen. */
+/** Creates a team from the sidebar's "+ New team" affordance and lands on its detail screen. */
 export async function createTeamThroughUi(page: Page, name: string): Promise<void> {
 	await page.goto('/teams');
+	await page.getByRole('button', { name: 'New team' }).click();
 	await page.getByLabel('Team name', { exact: true }).fill(name);
 	await page.getByRole('button', { name: 'Create team', exact: true }).click();
 	await expect(page).toHaveURL(/\/teams\/[a-z0-9-]+$/);
 }
 
-/** Creates a season from the current team detail screen. */
-export async function createSeasonThroughUi(page: Page, name: string): Promise<void> {
+/** Creates a season from the active team's "+ New season" affordance and lands on its detail screen. */
+export async function createSeasonThroughUi(
+	page: Page,
+	name: string,
+	dates?: { startDate?: string; endDate?: string },
+): Promise<void> {
+	await page.getByRole('button', { name: 'New season' }).click();
 	await page.getByLabel('Season name', { exact: true }).fill(name);
+	if (dates?.startDate !== undefined) {
+		await page.getByLabel('Start date', { exact: true }).fill(dates.startDate);
+	}
+	if (dates?.endDate !== undefined) {
+		await page.getByLabel('End date', { exact: true }).fill(dates.endDate);
+	}
 	await page.getByRole('button', { name: 'Create season', exact: true }).click();
-	await expect(page.getByRole('link', { name, exact: true })).toBeVisible();
+	await expect(page.getByRole('heading', { name, level: 1 })).toBeVisible();
 }
 
 /** Accepts the next confirmation dialog triggered by the page. */

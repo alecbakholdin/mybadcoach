@@ -1,28 +1,25 @@
 <script lang="ts">
-	import { goto, refreshAll } from '$app/navigation';
+	import { refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
 	import { events as eventClient, seasons as seasonClient } from '#lib/api';
+	import { dateRange } from '#lib/dates';
 	import { formErrorOf } from '#lib/forms';
+	import Icon from '#lib/Icon.svelte';
 	import { displayName } from '#lib/players';
 	import RoleBadge from '#lib/RoleBadge.svelte';
+	import SeasonRosterTable from '#lib/SeasonRosterTable.svelte';
+	import SeasonSettings from '#lib/SeasonSettings.svelte';
 	import type { SeasonDetailData } from '#lib/structure-data';
+	import TeamSettings from '#lib/TeamSettings.svelte';
 	import type { Event } from '$shared/gen/mybadcoach/events/v1/events_pb';
 
 	let { data }: { data: SeasonDetailData } = $props();
 
-	const isOwner = $derived(data.role === 'owner');
+	let tab = $state<'events' | 'roster' | 'settings'>('events');
 
-	let editName = $derived(data.season?.name ?? '');
-	let editStart = $derived(data.season?.startDate ?? '');
-	let editEnd = $derived(data.season?.endDate ?? '');
-	let fieldErrors = $state<Record<string, string>>({});
-	let saveError = $state('');
-	let saving = $state(false);
-
-	let deleting = $state(false);
-	let deleteError = $state('');
-
+	// --- Events tab: compact create form + ledger ---
+	let showCreateEvent = $state(false);
 	let eventName = $state('');
 	let eventStart = $state('');
 	let eventEnd = $state('');
@@ -31,9 +28,15 @@
 	let eventError = $state('');
 	let creatingEvent = $state(false);
 
-	let selectedPlayerSlug = $state('');
+	// --- Roster tab: stats table, selection, and multi-add ---
+	let selectedSlugs = $state<string[]>([]);
 	let rosterError = $state('');
-	let rosterBusy = $state(false);
+	let removingSelected = $state(false);
+
+	let searchQuery = $state('');
+	let playersToAdd = $state<string[]>([]);
+	let addError = $state('');
+	let addingPlayers = $state(false);
 
 	/** Team players not yet registered on this season's roster. */
 	const availablePlayers = $derived(
@@ -41,6 +44,24 @@
 			(player) => !data.roster.some((rostered) => rostered.slug === player.slug),
 		),
 	);
+
+	const pickedPlayers = $derived(
+		playersToAdd.flatMap((slug) => {
+			const player = data.teamPlayers.find((entry) => entry.slug === slug);
+			return player === undefined ? [] : [player];
+		}),
+	);
+
+	const suggestions = $derived.by(() => {
+		const query = searchQuery.trim().toLowerCase();
+		if (query === '') {
+			return [];
+		}
+		return availablePlayers.filter(
+			(player) =>
+				!playersToAdd.includes(player.slug) && displayName(player).toLowerCase().includes(query),
+		);
+	});
 
 	/** One-line summary of an event's dates and location, omitting blanks. */
 	function eventMeta(event: Event): string {
@@ -69,6 +90,7 @@
 			eventStart = '';
 			eventEnd = '';
 			eventLocation = '';
+			showCreateEvent = false;
 			await refreshAll();
 		} catch (error) {
 			const outcome = formErrorOf(error, 'Could not create the event.');
@@ -79,90 +101,58 @@
 		}
 	}
 
-	async function handleSave(event: SubmitEvent): Promise<void> {
-		event.preventDefault();
-		saveError = '';
-		fieldErrors = {};
-		saving = true;
+	function pickPlayer(slug: string): void {
+		playersToAdd = [...new Set([...playersToAdd, slug])];
+	}
+
+	function unpickPlayer(slug: string): void {
+		playersToAdd = playersToAdd.filter((entry) => entry !== slug);
+	}
+
+	async function handleAddPlayers(): Promise<void> {
+		if (playersToAdd.length === 0) {
+			return;
+		}
+		addError = '';
+		addingPlayers = true;
 		try {
-			await seasonClient.updateSeason({
-				teamSlug: data.teamSlug,
-				seasonSlug: data.seasonSlug,
-				name: editName,
-				// An empty string is present-on-the-wire and clears the column;
-				// `undefined` would mean "leave unchanged".
-				startDate: editStart,
-				endDate: editEnd,
-			});
+			for (const slug of playersToAdd) {
+				await seasonClient.addSeasonRosterEntry({
+					teamSlug: data.teamSlug,
+					seasonSlug: data.seasonSlug,
+					playerSlug: slug,
+				});
+			}
+			playersToAdd = [];
+			searchQuery = '';
 			await refreshAll();
-		} catch (error) {
-			const outcome = formErrorOf(error, 'Could not save the season.');
-			fieldErrors = outcome.fieldErrors;
-			saveError = outcome.message;
+		} catch {
+			addError = 'Could not add the selected players.';
 		} finally {
-			saving = false;
+			addingPlayers = false;
 		}
 	}
 
-	async function handleAddToRoster(submit: SubmitEvent): Promise<void> {
-		submit.preventDefault();
-		if (selectedPlayerSlug === '') {
+	async function handleRemoveSelected(): Promise<void> {
+		if (selectedSlugs.length === 0) {
 			return;
 		}
 		rosterError = '';
-		rosterBusy = true;
+		removingSelected = true;
 		try {
-			await seasonClient.addSeasonRosterEntry({
-				teamSlug: data.teamSlug,
-				seasonSlug: data.seasonSlug,
-				playerSlug: selectedPlayerSlug,
-			});
-			selectedPlayerSlug = '';
+			for (const slug of selectedSlugs) {
+				await seasonClient.removeSeasonRosterEntry({
+					teamSlug: data.teamSlug,
+					seasonSlug: data.seasonSlug,
+					playerSlug: slug,
+				});
+			}
+			selectedSlugs = [];
 			await refreshAll();
 		} catch {
-			rosterError = 'Could not add the player to the season roster.';
+			rosterError = 'Could not remove the selected players.';
 		} finally {
-			rosterBusy = false;
-		}
-	}
-
-	async function handleRemoveFromRoster(playerSlug: string): Promise<void> {
-		rosterError = '';
-		rosterBusy = true;
-		try {
-			await seasonClient.removeSeasonRosterEntry({
-				teamSlug: data.teamSlug,
-				seasonSlug: data.seasonSlug,
-				playerSlug,
-			});
-			await refreshAll();
-		} catch {
-			rosterError = 'Could not remove the player from the season roster.';
-		} finally {
-			rosterBusy = false;
-		}
-	}
-
-	async function handleDelete(): Promise<void> {
-		if (
-			!confirm(
-				`Delete ${data.season?.name ?? 'this season'}? This permanently deletes its events and matches.`,
-			)
-		) {
-			return;
-		}
-		deleteError = '';
-		deleting = true;
-		try {
-			await seasonClient.deleteSeason({
-				teamSlug: data.teamSlug,
-				seasonSlug: data.seasonSlug,
-			});
-			await goto(resolve('/teams/[team_slug]', { team_slug: data.teamSlug }));
-		} catch {
-			deleteError = 'Could not delete the season.';
-		} finally {
-			deleting = false;
+			removingSelected = false;
 		}
 	}
 </script>
@@ -171,176 +161,318 @@
 	<title>{data.season?.name ?? 'Season'} · My Bad, Coach</title>
 </svelte:head>
 
-<main class="page">
-	<a class="back-link" href={resolve('/teams/[team_slug]', { team_slug: data.teamSlug })}>
-		← {data.teamName || 'Team'}
-	</a>
-
+<main class="structure-page">
 	{#if data.season === undefined}
 		<div class="card">
 			<h1>Season not found</h1>
 			<p class="muted">This season does not exist or you are not a member of its team.</p>
 		</div>
 	{:else}
-		<div class="page-head">
-			<h1>{data.season.name}</h1>
-			<RoleBadge role={data.role} />
+		<div class="route" aria-label="Breadcrumb">
+			<span class="route-seg">/teams</span>
+			<span class="route-seg">/{data.teamSlug}</span>
+			<span class="route-seg">/seasons</span>
+			<span class="route-seg">/{data.seasonSlug}</span>
 		</div>
 
-		<section class="card section-card">
-			<h2>Season details</h2>
-			<form onsubmit={handleSave}>
-				<div class="field">
-					<label for="edit-season-name">Season name</label>
-					<input id="edit-season-name" type="text" required bind:value={editName} />
-					{#if fieldErrors.name}
-						<p class="field-error">{fieldErrors.name}</p>
-					{/if}
-				</div>
-				<div class="date-range">
-					<div class="field">
-						<label for="edit-season-start">Start date</label>
-						<input id="edit-season-start" type="date" bind:value={editStart} />
-					</div>
-					<div class="field">
-						<label for="edit-season-end">End date</label>
-						<input id="edit-season-end" type="date" bind:value={editEnd} />
-					</div>
-				</div>
-				{#if saveError !== ''}
-					<p class="form-error" role="alert">{saveError}</p>
-				{/if}
-				<button class="btn btn-primary" type="submit" disabled={saving}>
-					{saving ? 'Saving…' : 'Save changes'}
-				</button>
-			</form>
-			{#if isOwner}
-				<div class="danger-zone">
-					{#if deleteError !== ''}
-						<p class="form-error" role="alert">{deleteError}</p>
-					{/if}
-					<button class="btn btn-danger" type="button" disabled={deleting} onclick={handleDelete}>
-						{deleting ? 'Deleting…' : 'Delete season'}
-					</button>
+		<header class="structure-header">
+			<div class="title-row">
+				<h1>{data.season.name}</h1>
+				<RoleBadge role={data.role} />
+			</div>
+			{#if dateRange(data.season.startDate, data.season.endDate) !== ''}
+				<div class="head-sub">
+					<span class="summary">
+						<Icon name="calendar" />
+						{dateRange(data.season.startDate, data.season.endDate)}
+					</span>
 				</div>
 			{/if}
-		</section>
+		</header>
 
-		<section class="card section-card">
-			<h2>Events</h2>
-			{#if data.events.length === 0}
-				<p class="muted">No events yet.</p>
-			{:else}
-				<ul class="item-list" aria-label="Events">
-					{#each data.events as event (event.slug)}
-						<li class="item-row">
-							<a
-								href={resolve('/teams/[team_slug]/seasons/[season_slug]/events/[event_slug]', {
-									team_slug: data.teamSlug,
-									season_slug: data.seasonSlug,
-									event_slug: event.slug,
-								})}
-							>
-								{event.name}
-							</a>
-							{#if eventMeta(event) !== ''}
-								<span class="muted season-dates">{eventMeta(event)}</span>
+		<div class="tabbed">
+			<div class="tabs" role="tablist" aria-label="Season">
+				<button
+					class="tab"
+					type="button"
+					role="tab"
+					aria-selected={tab === 'events'}
+					onclick={() => {
+						tab = 'events';
+					}}
+				>
+					<Icon name="calendar" />
+					Events
+				</button>
+				<button
+					class="tab"
+					type="button"
+					role="tab"
+					aria-selected={tab === 'roster'}
+					onclick={() => {
+						tab = 'roster';
+					}}
+				>
+					<Icon name="chart" />
+					Roster
+				</button>
+				<button
+					class="tab"
+					type="button"
+					role="tab"
+					aria-selected={tab === 'settings'}
+					onclick={() => {
+						tab = 'settings';
+					}}
+				>
+					<Icon name="gear" />
+					Settings
+				</button>
+			</div>
+
+			{#if tab === 'events'}
+				<div class="panel" role="tabpanel" aria-label="Events">
+					<div class="section-head">
+						<h2 class="section-title">
+							<Icon name="calendar" />
+							Events
+						</h2>
+						<button
+							class="btn btn-secondary btn-compact"
+							type="button"
+							onclick={() => {
+								showCreateEvent = !showCreateEvent;
+							}}
+						>
+							<Icon name="plus" />
+							New event
+						</button>
+					</div>
+
+					{#if showCreateEvent}
+						<form class="create-event-form" onsubmit={handleCreateEvent}>
+							<div class="field">
+								<label for="create-event-name">Event name</label>
+								<input id="create-event-name" type="text" required bind:value={eventName} />
+								{#if eventFieldErrors.name}
+									<p class="field-error">{eventFieldErrors.name}</p>
+								{/if}
+							</div>
+							<div class="form-grid">
+								<div class="field">
+									<label for="create-event-start">Start date</label>
+									<input id="create-event-start" type="date" bind:value={eventStart} />
+								</div>
+								<div class="field">
+									<label for="create-event-end">End date</label>
+									<input id="create-event-end" type="date" bind:value={eventEnd} />
+								</div>
+							</div>
+							<div class="field">
+								<label for="create-event-location">Location</label>
+								<input id="create-event-location" type="text" bind:value={eventLocation} />
+							</div>
+							{#if eventError !== ''}
+								<p class="form-error" role="alert">{eventError}</p>
 							{/if}
-						</li>
-					{/each}
-				</ul>
-			{/if}
-
-			<h3>Create event</h3>
-			<form onsubmit={handleCreateEvent}>
-				<div class="field">
-					<label for="create-event-name">Event name</label>
-					<input id="create-event-name" type="text" required bind:value={eventName} />
-					{#if eventFieldErrors.name}
-						<p class="field-error">{eventFieldErrors.name}</p>
+							<div class="btn-row">
+								<button class="btn btn-primary" type="submit" disabled={creatingEvent}>
+									{creatingEvent ? 'Creating event…' : 'Create event'}
+								</button>
+								<button
+									class="btn btn-tertiary"
+									type="button"
+									onclick={() => {
+										showCreateEvent = false;
+									}}
+								>
+									Cancel
+								</button>
+							</div>
+						</form>
 					{/if}
-				</div>
-				<div class="date-range">
-					<div class="field">
-						<label for="create-event-start">Event start date</label>
-						<input id="create-event-start" type="date" bind:value={eventStart} />
-					</div>
-					<div class="field">
-						<label for="create-event-end">Event end date</label>
-						<input id="create-event-end" type="date" bind:value={eventEnd} />
-					</div>
-				</div>
-				<div class="field">
-					<label for="create-event-location">Location</label>
-					<input id="create-event-location" type="text" bind:value={eventLocation} />
-				</div>
-				{#if eventError !== ''}
-					<p class="form-error" role="alert">{eventError}</p>
-				{/if}
-				<button class="btn btn-primary" type="submit" disabled={creatingEvent}>
-					{creatingEvent ? 'Creating event…' : 'Create event'}
-				</button>
-			</form>
-		</section>
 
-		<section class="section-card">
-			<h2>Season roster</h2>
-			<p class="muted">
-				{data.rosterTotal}
-				{data.rosterTotal === 1 ? 'player' : 'players'} on this season's roster.
-			</p>
-			{#if data.roster.length === 0}
-				<p class="muted">No players on this season's roster yet.</p>
-			{:else}
-				<ul class="item-list" aria-label="Season roster">
-					{#each data.roster as player (player.slug)}
-						<li class="item-row">
-							<span>{displayName(player)}</span>
-							<button
-								class="btn btn-secondary roster-remove"
-								type="button"
-								disabled={rosterBusy}
-								onclick={() => {
-									void handleRemoveFromRoster(player.slug);
-								}}
-							>
-								Remove
-							</button>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-			{#if rosterError !== ''}
-				<p class="form-error" role="alert">{rosterError}</p>
-			{/if}
-			{#if availablePlayers.length === 0}
-				<p class="muted">
-					{#if data.teamPlayers.length === 0}
-						No team players yet. Add players from the team's Players screen.
+					{#if data.events.length === 0}
+						<p class="muted">No events yet.</p>
 					{:else}
-						Every team player is already on this season's roster.
-					{/if}
-				</p>
-			{:else}
-				<form class="roster-form" onsubmit={handleAddToRoster}>
-					<div class="field">
-						<label for="add-season-roster-player">Player to add</label>
-						<select id="add-season-roster-player" bind:value={selectedPlayerSlug}>
-							<option value="">Select a player</option>
-							{#each availablePlayers as player (player.slug)}
-								<option value={player.slug}>{displayName(player)}</option>
+						<ul class="ledger" aria-label="Events">
+							{#each data.events as event (event.slug)}
+								<li>
+									<a
+										class="ledger-row"
+										href={resolve('/teams/[team_slug]/seasons/[season_slug]/events/[event_slug]', {
+											team_slug: data.teamSlug,
+											season_slug: data.seasonSlug,
+											event_slug: event.slug,
+										})}
+									>
+										<span class="row-icon" aria-hidden="true">
+											<Icon name="calendar" />
+										</span>
+										<span class="row-main">
+											<span class="row-title">{event.name}</span>
+											{#if eventMeta(event) !== ''}
+												<span class="row-meta">{eventMeta(event)}</span>
+											{/if}
+										</span>
+										<span class="row-open" aria-hidden="true">
+											<Icon name="chevron-right" />
+										</span>
+									</a>
+								</li>
 							{/each}
-						</select>
+						</ul>
+					{/if}
+				</div>
+			{:else if tab === 'roster'}
+				<div class="panel" role="tabpanel" aria-label="Roster">
+					<div class="section-head">
+						<h2 class="section-title">
+							<Icon name="chart" />
+							Player statistics
+						</h2>
 					</div>
-					<button
-						class="btn btn-primary"
-						type="submit"
-						disabled={rosterBusy || selectedPlayerSlug === ''}
-					>
-						Add to season roster
-					</button>
-				</form>
+
+					<p class="roster-summary">
+						<strong>{data.rosterTotal}</strong>
+						{data.rosterTotal === 1 ? 'player' : 'players'} on this season's roster.
+					</p>
+
+					{#if availablePlayers.length > 0}
+						<div class="add-block">
+							<h3 class="add-head">
+								<Icon name="user-plus" />
+								Add players
+							</h3>
+
+							<div class="autocomplete">
+								<div class="search-wrap">
+									<Icon name="search" />
+									<label class="sr-only" for="player-search">Search team players</label>
+									<input
+										class="input"
+										id="player-search"
+										type="text"
+										placeholder="Search team players"
+										autocomplete="off"
+										role="combobox"
+										aria-expanded={suggestions.length > 0}
+										aria-controls="player-suggestions"
+										aria-autocomplete="list"
+										bind:value={searchQuery}
+									/>
+								</div>
+
+								{#if pickedPlayers.length > 0}
+									<ul class="chips" aria-label="Selected players">
+										{#each pickedPlayers as player (player.slug)}
+											<li class="chip">
+												<span>{displayName(player)}</span>
+												<button
+													class="chip-remove"
+													type="button"
+													aria-label={`Remove ${displayName(player)}`}
+													onclick={() => {
+														unpickPlayer(player.slug);
+													}}
+												>
+													<Icon name="close" />
+												</button>
+											</li>
+										{/each}
+									</ul>
+								{/if}
+
+								{#if searchQuery.trim() !== ''}
+									<div
+										class="suggestions"
+										id="player-suggestions"
+										role="listbox"
+										aria-label="Suggested players"
+									>
+										{#each suggestions as player (player.slug)}
+											<button
+												class="suggestion"
+												type="button"
+												role="option"
+												aria-selected={false}
+												onclick={() => {
+													pickPlayer(player.slug);
+												}}
+											>
+												<span class="suggestion-name">{displayName(player)}</span>
+												<span class="suggestion-plus" aria-hidden="true">
+													<Icon name="plus" />
+												</span>
+											</button>
+										{:else}
+											<p class="suggestion-empty">No matching players.</p>
+										{/each}
+									</div>
+								{/if}
+
+								{#if addError !== ''}
+									<p class="form-error" role="alert">{addError}</p>
+								{/if}
+
+								<div class="add-actions">
+									<button
+										class="btn btn-primary"
+										type="button"
+										disabled={playersToAdd.length === 0 || addingPlayers}
+										onclick={handleAddPlayers}
+									>
+										{addingPlayers
+											? 'Adding…'
+											: `Add ${playersToAdd.length} ${playersToAdd.length === 1 ? 'player' : 'players'}`}
+									</button>
+								</div>
+							</div>
+						</div>
+					{/if}
+
+					{#if selectedSlugs.length > 0}
+						<div class="bulk-bar">
+							<span class="bulk-count" aria-live="polite">
+								{selectedSlugs.length} selected
+							</span>
+							<button
+								class="btn btn-danger btn-compact"
+								type="button"
+								disabled={removingSelected}
+								onclick={handleRemoveSelected}
+							>
+								<Icon name="trash" />
+								Remove selected
+							</button>
+						</div>
+					{/if}
+
+					{#if rosterError !== ''}
+						<p class="form-error" role="alert">{rosterError}</p>
+					{/if}
+
+					{#if data.roster.length === 0}
+						<p class="muted">No players on this season's roster yet.</p>
+					{:else}
+						<SeasonRosterTable players={data.roster} bind:selectedSlugs />
+					{/if}
+				</div>
+			{:else}
+				<div class="panel" role="tabpanel" aria-label="Settings">
+					<div class="settings-stack">
+						<TeamSettings teamSlug={data.teamSlug} teamName={data.teamName} role={data.role} />
+						<SeasonSettings
+							teamSlug={data.teamSlug}
+							seasonSlug={data.seasonSlug}
+							name={data.season.name}
+							startDate={data.season.startDate}
+							endDate={data.season.endDate}
+							role={data.role}
+						/>
+					</div>
+				</div>
 			{/if}
-		</section>
+		</div>
 	{/if}
 </main>

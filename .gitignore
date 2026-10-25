@@ -54,7 +54,9 @@ server/web/static/*
 test-results/
 playwright-report/
 blob-report/
+.playwright-mcp
 
 # Editor/IDE
 # .idea/
 # .vscode/
+

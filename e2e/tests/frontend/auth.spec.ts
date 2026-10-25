@@ -24,7 +24,7 @@ test('register signs the user in and redirects to /teams', async ({ page }) => {
 
 	await expect(page).toHaveURL(/\/teams$/);
 	await expect(page.getByRole('heading', { name: 'Your teams' })).toBeVisible();
-	await expect(page.getByRole('button', { name: 'Create team' })).toBeVisible();
+	await expect(page.getByRole('button', { name: 'New team' })).toBeVisible();
 });
 
 test('logout clears the session and returns home', async ({ page }) => {
