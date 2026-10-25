@@ -4,7 +4,9 @@
 	import { goto, refreshAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 
+	import AccountActions from '#lib/AccountActions.svelte';
 	import { seasons as seasonClient, teams } from '#lib/api';
+	import Brand from '#lib/Brand.svelte';
 	import { dateRange } from '#lib/dates';
 	import { formErrorOf } from '#lib/forms';
 	import Icon from '#lib/Icon.svelte';
@@ -138,14 +140,17 @@
 
 	<aside class="rail" id="team-navigation" aria-label="Team navigation">
 		<div class="rail-inner">
-			<button
-				class="icon-btn rail-close"
-				type="button"
-				aria-label="Close navigation"
-				onclick={closeRail}
-			>
-				<Icon name="close" />
-			</button>
+			<div class="rail-head">
+				<Brand />
+				<button
+					class="icon-btn rail-close"
+					type="button"
+					aria-label="Close navigation"
+					onclick={closeRail}
+				>
+					<Icon name="close" />
+				</button>
+			</div>
 
 			<nav class="rail-nav" aria-label="Your teams">
 				<div class="rail-kicker">
@@ -288,6 +293,8 @@
 						New team
 					</button>
 				{/if}
+
+				<AccountActions variant="rail" />
 			</div>
 		</div>
 	</aside>

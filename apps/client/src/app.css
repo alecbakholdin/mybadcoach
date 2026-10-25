@@ -494,6 +494,13 @@ body {
 	scrollbar-width: thin;
 	scrollbar-color: var(--hairline) transparent;
 }
+.rail-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding-bottom: 12px;
+}
 .rail-close {
 	display: none;
 	margin-left: auto;
@@ -727,6 +734,18 @@ body {
 	margin-top: auto;
 	padding-top: 12px;
 	border-top: 1px solid var(--hairline);
+}
+.rail-account {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 8px;
+	margin-top: 12px;
+	padding-top: 12px;
+	border-top: 1px solid var(--hairline);
+}
+.rail-account .who {
+	padding: 0 8px;
 }
 .rail-create {
 	display: flex;
